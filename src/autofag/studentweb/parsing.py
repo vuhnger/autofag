@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from bs4 import BeautifulSoup, Tag
-from lxml import etree
+from lxml import etree  # ty: ignore[unresolved-import]
 
 from autofag.config import SelectorConfig
 from autofag.models import CourseCode, CourseRow, InvalidCourseCode, RowStatus, SearchResult
@@ -186,28 +186,25 @@ def _teaching_section_text(cell: Tag, selectors: SelectorConfig) -> str:
 
 
 def _bold_label(node: Tag) -> str:
-    classes = node.get("class") or []
+    classes = _class_list(node)
     if node.name != "span" or "bold" not in classes:
         return ""
     return node.get_text(strip=True)
 
 
 def _is_header_label(node: Tag, selectors: SelectorConfig) -> bool:
-    classes = node.get("class") or []
-    return selectors.header_label_class in classes
+    return selectors.header_label_class in _class_list(node)
 
 
 def _is_inside_detail_toggle(node: Tag, selectors: SelectorConfig) -> bool:
     for parent in node.parents:
-        if isinstance(parent, Tag) and selectors.detail_toggle_class in (parent.get("class") or []):
+        if isinstance(parent, Tag) and selectors.detail_toggle_class in _class_list(parent):
             return True
-    return selectors.detail_toggle_class in (node.get("class") or [])
+    return selectors.detail_toggle_class in _class_list(node)
 
 
 def _select_button(row_element: Tag, selectors: SelectorConfig) -> tuple[str | None, int | None]:
-    button = row_element.find(
-        lambda tag: bool(tag.get("id")) and selectors.select_button_marker in tag.get("id", "")
-    )
+    button = row_element.find(lambda tag: selectors.select_button_marker in _element_id(tag))
     if not isinstance(button, Tag):
         return None, None
 
@@ -236,10 +233,23 @@ def _parse_hit_count(hit_count_html: str) -> int:
 
 def _has_next_page(soup: BeautifulSoup, selectors: SelectorConfig) -> bool:
     for element in soup.find_all(class_=selectors.paginator_next_class):
-        classes = element.get("class") or []
-        if "ui-state-disabled" not in classes:
+        if isinstance(element, Tag) and "ui-state-disabled" not in _class_list(element):
             return True
     return False
+
+
+def _class_list(node: Tag) -> list[str]:
+    value = node.get("class")
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return value.split()
+    return [str(item) for item in value]
+
+
+def _element_id(node: Tag) -> str:
+    value = node.get("id")
+    return value if isinstance(value, str) else ""
 
 
 def looks_like_login_page(html: str, selectors: SelectorConfig) -> bool:

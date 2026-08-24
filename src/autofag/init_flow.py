@@ -225,12 +225,14 @@ class InitWizard:
 
     def _disable_channel(self, name: str) -> None:
         notify = self._config.notify
-        {
-            "ntfy": notify.ntfy,
-            "email": notify.email,
-            "sms": notify.sms,
-            "macos": notify.macos,
-        }[name].enabled = False
+        if name == "ntfy":
+            notify.ntfy.enabled = False
+        elif name == "email":
+            notify.email.enabled = False
+        elif name == "sms":
+            notify.sms.enabled = False
+        elif name == "macos":
+            notify.macos.enabled = False
 
     def _verify_channel(self, name: str) -> bool:
         self._presenter.info(nb.CHANNEL_TEST_SENDING.format(channel=name))

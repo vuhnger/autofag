@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import httpx
+from httpx._client import USE_CLIENT_DEFAULT
 
 from autofag.config import StudentwebConfig
 
@@ -36,7 +37,7 @@ class OutboundHttpClient:
                 content=content,
                 data=dict(data) if data else None,
                 headers=dict(headers) if headers else None,
-                auth=auth,
+                auth=auth if auth is not None else USE_CLIENT_DEFAULT,
             )
         except httpx.HTTPError as error:
             raise OutboundHttpError(f"POST {url} failed: {error}") from error

@@ -5,8 +5,8 @@ import os
 from logging import Logger
 from pathlib import Path
 
+from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import Page, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
 from autofag import strings_nb as nb
@@ -94,8 +94,8 @@ class PlaywrightStudentwebPage:
         self._config = config
         self._logger = logger
         self._presenter = presenter
-        self._playwright = None
-        self._context = None
+        self._playwright: Playwright | None = None
+        self._context: BrowserContext | None = None
         self._page: Page | None = None
 
     def log_in(self, instructions: str) -> None:
@@ -211,8 +211,9 @@ class PlaywrightStudentwebPage:
             raise ProfileInUse(nb.BROWSER_PROFILE_IN_USE.format(pid=holder))
 
         try:
-            self._playwright = sync_playwright().start()
-            self._context = self._playwright.chromium.launch_persistent_context(
+            playwright = sync_playwright().start()
+            self._playwright = playwright
+            self._context = playwright.chromium.launch_persistent_context(
                 user_data_dir=str(profile_dir),
                 headless=self._config.auth.headless,
                 args=["--no-first-run", "--no-default-browser-check"],
@@ -223,7 +224,10 @@ class PlaywrightStudentwebPage:
                 raise ProfileInUse(nb.BROWSER_PROFILE_IN_USE_UNKNOWN) from error
             raise PageUnavailable(nb.BROWSER_FAILED.format(reason=error)) from error
 
-        self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
+        context = self._context
+        if context is None:
+            raise PageUnavailable("nettleseren har ingen aktiv kontekst")
+        self._page = context.pages[0] if context.pages else context.new_page()
         return self._page
 
     def _is_on_courses_page(self, page: Page) -> bool:
