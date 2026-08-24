@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import smtplib
 import subprocess
 from email.message import EmailMessage
@@ -17,7 +18,7 @@ from autofag.storage.secrets import (
     SecretStore,
 )
 
-NTFY_PRIORITY = {Severity.INFO: "3", Severity.IMPORTANT: "4", Severity.CRITICAL: "5"}
+NTFY_PRIORITY = {Severity.INFO: 3, Severity.IMPORTANT: 4, Severity.CRITICAL: 5}
 
 
 class NtfyChannel:
@@ -35,19 +36,26 @@ class NtfyChannel:
         if not topic:
             return DeliveryResult(self.name, False, "no ntfy topic configured")
 
-        headers = {
-            "Title": notification.title,
-            "Priority": NTFY_PRIORITY[notification.severity],
+        payload = {
+            "topic": topic,
+            "title": notification.title,
+            "message": notification.body,
+            "priority": NTFY_PRIORITY[notification.severity],
         }
         if notification.tags:
-            headers["Tags"] = ",".join(notification.tags)
+            payload["tags"] = list(notification.tags)
+
+        headers = {"Content-Type": "application/json; charset=utf-8"}
         token = self._secrets.get(SECRET_NTFY_TOKEN)
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        url = f"{self._config.server_url.rstrip('/')}/{topic}"
         try:
-            self._http.post(url, content=notification.body.encode("utf-8"), headers=headers)
+            self._http.post(
+                self._config.server_url.rstrip("/"),
+                content=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers=headers,
+            )
         except OutboundHttpError as error:
             return DeliveryResult(self.name, False, str(error))
         return DeliveryResult(self.name, True)

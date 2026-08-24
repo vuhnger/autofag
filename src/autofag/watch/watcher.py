@@ -125,7 +125,9 @@ class Watcher:
             self._dispatcher.dispatch(available_notification(row.code.value, row.name))
             if entry.auto_enroll:
                 result = self._enroller.enroll(row, self._term)
-                self._logger.info("enroll %s -> %s", row.code, result.outcome.value)
+                self._logger.info(
+                    "enroll %s -> %s (%s)", row.code, result.outcome.value, result.detail
+                )
 
         self._reschedule(course)
 

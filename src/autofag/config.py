@@ -58,8 +58,9 @@ class SelectorConfig(BaseModel):
         "bekreft",
         "lagre",
         "legg til",
-        "meld deg til undervisning",
-        "meld meg til undervisning",
+        "meld",
+        "ok",
+        "fortsett",
     )
     confirm_negative_labels: tuple[str, ...] = ("avbryt", "nei", "lukk", "cancel")
     header_label_class: str = "header"

@@ -172,8 +172,10 @@ class PlaywrightStudentwebPage:
             and not any(word in control["label"] for word in selectors.confirm_negative_labels)
         ]
         if len(candidates) != 1:
+            seen = ", ".join(sorted({c["label"] or c["id"] for c in controls})) or "ingen"
             raise ConfirmDialogUnrecognised(
-                f"forventet nøyaktig én bekreftknapp, fant {len(candidates)}"
+                f"forventet nøyaktig én bekreftknapp, fant {len(candidates)}. "
+                f"Kontroller i dialogen: {seen}"
             )
         return candidates[0]
 
