@@ -174,7 +174,7 @@ class AuthConfig(BaseModel):
     profile_dir: Path | None = None
     login_timeout_seconds: float = 600.0
     headless: bool = False
-    logged_in_marker: str = "aktiveemner.jsf"
+    signed_in_selector: str = 'a[href*="aktiveemner.jsf"]'
 
 
 class NtfyConfig(BaseModel):

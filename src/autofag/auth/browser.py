@@ -94,6 +94,10 @@ DESCRIBE_DIALOG_CANDIDATES = """
 }
 """
 
+IS_SIGNED_IN = """
+(selector) => !!document.querySelector(selector)
+"""
+
 LOOKS_LIKE_LOGIN = """
 (markers) => {
   const html = document.documentElement.innerHTML;
@@ -182,14 +186,15 @@ class PlaywrightStudentwebPage:
 
     def log_in(self, instructions: str) -> None:
         page = self._ensure_page()
-        if self._is_on_courses_page(page):
+        if self._is_signed_in(page):
             return
 
         self._presenter.info(instructions)
         page.goto(self._config.studentweb.base_url, wait_until="domcontentloaded")
         try:
-            page.wait_for_url(
-                f"**{self._config.auth.logged_in_marker}**",
+            page.wait_for_function(
+                IS_SIGNED_IN,
+                arg=self._config.auth.signed_in_selector,
                 timeout=self._config.auth.login_timeout_seconds * 1000,
             )
         except PlaywrightTimeout as error:
@@ -199,7 +204,7 @@ class PlaywrightStudentwebPage:
         page = self._ensure_page()
         if not self._is_on_courses_page(page):
             page.goto(self._config.studentweb.courses_url, wait_until="domcontentloaded")
-        if not self._is_on_courses_page(page):
+        if not self._is_signed_in(page):
             raise NotAuthenticated("Studentweb sendte oss til innloggingssiden")
 
         selectors = self._config.selectors
@@ -341,10 +346,14 @@ class PlaywrightStudentwebPage:
         self._page = context.pages[0] if context.pages else context.new_page()
         return self._page
 
-    def _is_on_courses_page(self, page: Page) -> bool:
-        if self._config.auth.logged_in_marker not in page.url:
+    def _is_signed_in(self, page: Page) -> bool:
+        try:
+            return bool(page.evaluate(IS_SIGNED_IN, self._config.auth.signed_in_selector))
+        except PlaywrightError:
             return False
-        return not page.evaluate(LOOKS_LIKE_LOGIN, list(self._config.selectors.login_markers))
+
+    def _is_on_courses_page(self, page: Page) -> bool:
+        return self._config.studentweb.courses_path in page.url and self._is_signed_in(page)
 
     def _postback_url(self) -> str:
         return self._config.studentweb.courses_path
