@@ -11,7 +11,7 @@ RESTRICTED_MODULES = {
     "httpx": {"notify/http.py"},
     "playwright": {"auth/browser.py"},
     "keyring": {"storage/secrets.py"},
-    "subprocess": {"notify/channels.py"},
+    "subprocess": {"notify/channels.py", "daemon.py"},
     "smtplib": {"notify/channels.py"},
     "questionary": {"prompts.py"},
     "rich": {"presentation.py"},
@@ -55,3 +55,21 @@ def test_every_studentweb_action_goes_through_the_paced_page():
 def test_the_notification_client_can_never_reach_studentweb():
     outbound = (PACKAGE_ROOT / "notify" / "http.py").read_text(encoding="utf-8")
     assert "_reject_studentweb" in outbound
+
+
+def test_the_cli_entrypoint_is_the_last_thing_in_the_module():
+    source = (PACKAGE_ROOT / "cli.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    guards = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and getattr(node.test.left, "id", None) == "__name__"
+    ]
+
+    assert len(guards) == 1, "det skal finnes nøyaktig én __main__-blokk"
+    assert guards[0] is tree.body[-1], (
+        "__main__-blokken må stå sist, ellers kjører app() før hjelpefunksjonene finnes"
+    )

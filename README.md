@@ -20,6 +20,8 @@ sletter den.
 ```
 autofag init                  sett opp emner og varsling, og start overvåkingen
 autofag watch                 gjenoppta en watchlist du alt har satt opp
+autofag watch -d              kjør i bakgrunnen og gi terminalen tilbake
+autofag stop                  stopp overvåkingen som kjører i bakgrunnen
 autofag watch --dry-run       kjør hele løkka, men bekreft aldri en påmelding
 autofag status                se hva som overvåkes og hva sist status var
 autofag preview IN5170        gå gjennom påmeldingsdialogen uten å bekrefte noe

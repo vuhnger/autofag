@@ -222,11 +222,29 @@ class RunLock:
                 )
             )
 
+    def active_run(self) -> RunRow | None:
+        cutoff = self._clock.now() - timedelta(seconds=self._stale_after_seconds)
+        with self._session_factory() as session:
+            return session.scalar(
+                select(RunRow)
+                .where(RunRow.finished_at.is_(None))
+                .where(RunRow.heartbeat_at >= cutoff)
+                .order_by(RunRow.heartbeat_at.desc())
+            )
+
     def heartbeat(self, run_id: str) -> None:
         with self._session_factory() as session, session.begin():
             row = session.scalar(select(RunRow).where(RunRow.run_id == run_id))
             if row is not None:
                 row.heartbeat_at = self._clock.now()
+
+    def release_pid(self, pid: int) -> None:
+        with self._session_factory() as session, session.begin():
+            row = session.scalar(
+                select(RunRow).where(RunRow.pid == pid).where(RunRow.finished_at.is_(None))
+            )
+            if row is not None:
+                row.finished_at = self._clock.now()
 
     def release(self, run_id: str) -> None:
         with self._session_factory() as session, session.begin():

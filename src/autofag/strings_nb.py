@@ -161,3 +161,13 @@ CHOICE_UNKNOWN_COURSE = "{code} står ikke i watchlisten."
 
 ENROLL_CHOICE_MADE = "Valgte {value} for {field}."
 ENROLL_NO_OPTIONS = "{field} hadde ingen alternativer å velge mellom."
+
+DETACHED_STARTED = (
+    "Overvåkingen kjører i bakgrunnen (pid {pid}).\nLogg: {log}\nStopp med: autofag stop"
+)
+DETACHED_ALREADY_RUNNING = "Overvåkingen kjører allerede (pid {pid} på {host})."
+STOP_NOT_RUNNING = "Ingen overvåking kjører."
+STOP_OTHER_HOST = "Overvåkingen kjører på {host}, ikke her. Stopp den der."
+STOP_SENT = "Ba pid {pid} om å stoppe."
+STOP_STOPPED = "Overvåkingen er stoppet."
+STOP_STILL_RUNNING = "Pid {pid} svarte ikke innen {seconds} sekunder. Stopp den manuelt."
