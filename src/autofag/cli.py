@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import signal
+import socket
 from pathlib import Path
 from typing import Annotated
 
@@ -9,6 +11,12 @@ from autofag import __version__
 from autofag import strings_nb as nb
 from autofag.app import Services, build_services
 from autofag.config import load_config
+from autofag.daemon import (
+    DaemonError,
+    running_watch,
+    start_detached,
+    stop_process,
+)
 from autofag.errors import guarded
 from autofag.init_flow import InitWizard, WizardAborted
 from autofag.models import CourseCode, SearchCriteria
@@ -31,6 +39,10 @@ DryRunOption = Annotated[
     bool, typer.Option("--dry-run", help="Stopp før bekreftelsen, meld aldri på")
 ]
 VerboseOption = Annotated[bool, typer.Option("--verbose", help="Mer logging")]
+DetachOption = Annotated[
+    bool,
+    typer.Option("--detach", "-d", help="Kjør i bakgrunnen og gi terminalen tilbake"),
+]
 
 
 @app.command()
@@ -38,6 +50,7 @@ VerboseOption = Annotated[bool, typer.Option("--verbose", help="Mer logging")]
 def init(
     config_path: ConfigOption = None,
     dry_run: DryRunOption = False,
+    detach: DetachOption = False,
     verbose: VerboseOption = False,
 ) -> None:
     services = build_services(load_config(config_path), verbose)
@@ -65,8 +78,14 @@ def init(
     finally:
         prompter.close()
 
-    if outcome.started:
-        _run_watcher(services, dry_run)
+    if not outcome.started:
+        return
+
+    if detach:
+        _detach(services, config_path, dry_run, verbose)
+        return
+
+    _run_watcher(services, dry_run)
 
 
 @app.command()
@@ -74,14 +93,49 @@ def init(
 def watch(
     config_path: ConfigOption = None,
     dry_run: DryRunOption = False,
+    detach: DetachOption = False,
     verbose: VerboseOption = False,
 ) -> None:
-    services = build_services(load_config(config_path), verbose)
+    config = load_config(config_path)
+    services = build_services(config, verbose)
     if not services.watchlist.active_entries():
         services.presenter.warn(nb.WATCH_NOTHING_TO_DO)
         raise typer.Exit(code=1)
+
+    if detach:
+        _detach(services, config_path, dry_run, verbose)
+        return
+
     _authenticate(services)
     _run_watcher(services, dry_run)
+
+
+@app.command()
+@guarded
+def stop(config_path: ConfigOption = None) -> None:
+    services = build_services(load_config(config_path))
+    active = running_watch(services.run_lock)
+
+    if active is None:
+        services.presenter.warn(nb.STOP_NOT_RUNNING)
+        raise typer.Exit(code=1)
+    if active.hostname != socket.gethostname():
+        services.presenter.warn(nb.STOP_OTHER_HOST.format(host=active.hostname))
+        raise typer.Exit(code=1)
+
+    services.presenter.info(nb.STOP_SENT.format(pid=active.pid))
+    try:
+        stopped = stop_process(active.pid, services.clock)
+    except DaemonError as error:
+        services.presenter.warn(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not stopped:
+        services.presenter.warn(nb.STOP_STILL_RUNNING.format(pid=active.pid, seconds=30))
+        raise typer.Exit(code=1)
+
+    services.run_lock.release_pid(active.pid)
+    services.presenter.info(nb.STOP_STOPPED)
 
 
 @app.command()
@@ -216,6 +270,26 @@ def version() -> None:
     typer.echo(__version__)
 
 
+def _detach(services: Services, config_path: Path | None, dry_run: bool, verbose: bool) -> None:
+    active = running_watch(services.run_lock)
+    if active is not None:
+        services.presenter.warn(
+            nb.DETACHED_ALREADY_RUNNING.format(pid=active.pid, host=active.hostname)
+        )
+        raise typer.Exit(code=1)
+
+    arguments = ["watch"]
+    if config_path is not None:
+        arguments += ["--config", str(config_path.resolve())]
+    if dry_run:
+        arguments.append("--dry-run")
+    if verbose:
+        arguments.append("--verbose")
+
+    started = start_detached(arguments, services.config.storage.resolved_data_dir())
+    services.presenter.info(nb.DETACHED_STARTED.format(pid=started.pid, log=started.log_path))
+
+
 def _authenticate(services: Services) -> None:
     if services.config.studentweb.transport == "fake":
         return
@@ -264,6 +338,8 @@ def _run_watcher(services: Services, dry_run: bool) -> None:
         run_id=services.run_id,
     )
 
+    _install_stop_handler(watcher)
+
     try:
         watcher.run()
     except RunAlreadyActive as error:
@@ -278,8 +354,15 @@ def _run_watcher(services: Services, dry_run: bool) -> None:
         _close_quietly(services)
 
 
-if __name__ == "__main__":
-    app()
+def _install_stop_handler(watcher: Watcher) -> None:
+    def handle(signal_number, frame) -> None:
+        watcher.request_stop()
+
+    for received in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(received, handle)
+        except ValueError:
+            return
 
 
 def _close_quietly(services: Services) -> None:

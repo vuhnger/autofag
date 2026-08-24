@@ -57,7 +57,11 @@ class Watcher:
         self._term = term
         self._scheduled: dict[str, ScheduledCourse] = {}
         self._started_at = clock.now()
+        self._stop_requested = False
         self._last_postback_monotonic = clock.monotonic()
+
+    def request_stop(self) -> None:
+        self._stop_requested = True
 
     def run(self, max_cycles: int | None = None) -> None:
         self._run_lock.acquire(self._run_id)
@@ -71,6 +75,9 @@ class Watcher:
         self._seed_schedule()
 
         while self._scheduled and (max_cycles is None or cycles < max_cycles):
+            if self._stop_requested:
+                self._logger.info("stopper etter forespørsel")
+                return
             cycles += 1
             self._run_lock.heartbeat(self._run_id)
 
