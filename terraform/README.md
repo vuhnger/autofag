@@ -20,6 +20,6 @@ Releases lages av release-please: den samler Conventional Commits på main i en
 release-PR, og når du merger den, settes taggen og GitHub-releasen. `publish.yml`
 bygger og laster opp til PyPI når releasen publiseres.
 
-`Conventional Commit title` kjører på `pull_request_target`, som er den eneste måten
-sjekken også virker for PR-er fra forks uten å kjøre ukjent kode med et privilegert
-token.
+`Conventional Commit title` kjører på `pull_request`, ikke `pull_request_target`.
+Sistnevnte fyrer aldri for PR-ene release-please oppretter med `GITHUB_TOKEN`, og en
+påkrevd sjekk som aldri rapporterer er det samme som en låst main.

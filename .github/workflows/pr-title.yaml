@@ -1,7 +1,11 @@
 name: PR title
 
+# pull_request, ikke pull_request_target: sistnevnte fyrer aldri for PR-er som
+# release-please oppretter med GITHUB_TOKEN, og da blir en påkrevd sjekk som aldri
+# rapporterer til en lås på main. Jobben leser bare tittelen, så det begrensede
+# tokenet en fork får med pull_request holder.
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, edited, synchronize]
 
 permissions:
