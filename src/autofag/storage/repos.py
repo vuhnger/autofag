@@ -220,6 +220,12 @@ class RunLock:
         now = self._clock.now()
         cutoff = now - timedelta(seconds=self._stale_after_seconds)
         with self._session_factory() as session, session.begin():
+            mine = session.scalar(select(RunRow).where(RunRow.run_id == run_id))
+            if mine is not None:
+                mine.finished_at = None
+                mine.heartbeat_at = now
+                return
+
             active = session.scalar(
                 select(RunRow)
                 .where(RunRow.finished_at.is_(None))

@@ -183,3 +183,33 @@ def test_an_interrupted_enroll_is_not_reported_as_a_seat(config):
     assert outcomes, "brukeren må få vite hva som skjedde"
     assert not any("Påmeldt" in n.title for n in outcomes)
     assert harness.page.enrolled == []
+
+
+def test_a_running_watch_drops_courses_removed_from_the_watchlist(config):
+    from autofag.models import CourseCode
+
+    harness = build_harness(config)
+    watcher, _, watchlist = build_watcher(harness, ["IN5040", "IN5170"])
+
+    watcher.run(max_cycles=1)
+    watchlist.remove(CourseCode("IN5040"))
+    watchlist.remove(CourseCode("IN5170"))
+    watcher.run(max_cycles=3)
+
+    assert harness.page.actions.count("search") == 1
+
+
+def test_a_running_watch_picks_up_a_course_added_afterwards(config):
+    from autofag.models import CourseCode, WatchEntry
+
+    harness = build_harness(config)
+    watcher, _, watchlist = build_watcher(harness, ["IN5040"])
+
+    watcher.run(max_cycles=1)
+    watchlist.upsert(WatchEntry(code=CourseCode("IN5170"), name="Models of concurrency"))
+    watcher.run(max_cycles=2)
+
+    observed = {
+        entry.code.value for entry in watchlist.all_entries() if entry.last_status is not None
+    }
+    assert observed == {"IN5040", "IN5170"}
