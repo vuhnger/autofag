@@ -19,6 +19,7 @@ from autofag.models import (
 )
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
+    DialogState,
     RawSearchResult,
     SearchFilters,
     StudentwebPage,
@@ -94,28 +95,74 @@ class StudentwebSession:
             )
 
         try:
-            dialog = self._page.open_confirm_dialog(parsed.row.select_button_id or "")
+            state = self._page.open_confirm_dialog(parsed.row.select_button_id or "")
         except ConfirmDialogUnrecognised as error:
             return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
 
-        if code.value.casefold() not in dialog.casefold():
-            return EnrollResult(
-                code,
-                EnrollOutcome.ABORTED,
-                nb.ENROLL_DIALOG_MISMATCH.format(code=code, excerpt=_excerpt(dialog)),
-            )
+        return self._walk_dialog(code, state, dry_run)
 
-        try:
-            confirm_id = self._page.find_confirm_control()
-        except ConfirmDialogUnrecognised as error:
-            return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+    def _walk_dialog(self, code: CourseCode, state: DialogState, dry_run: bool) -> EnrollResult:
+        selectors = self._config.selectors
 
-        if dry_run:
-            return EnrollResult(
-                code, EnrollOutcome.ABORTED, nb.ENROLL_DRY_RUN.format(control=confirm_id)
-            )
+        for _ in range(selectors.max_dialog_steps):
+            if code.value.casefold() not in state.html.casefold():
+                return EnrollResult(
+                    code,
+                    EnrollOutcome.ABORTED,
+                    nb.ENROLL_DIALOG_MISMATCH.format(code=code, excerpt=_excerpt(state.html)),
+                )
 
-        return self._classify_outcome(code, self._page.confirm_enrollment(confirm_id))
+            final = self._pick(state, selectors.confirm_final_labels)
+            if final is not None:
+                if dry_run:
+                    return EnrollResult(
+                        code, EnrollOutcome.ABORTED, nb.ENROLL_DRY_RUN.format(control=final.label)
+                    )
+                try:
+                    self._page.advance_dialog(final.id)
+                except ConfirmDialogUnrecognised as error:
+                    return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+                return self._classify_outcome(code, self._page.read_outcome())
+
+            if state.pending_choices:
+                return EnrollResult(
+                    code,
+                    EnrollOutcome.ABORTED,
+                    nb.ENROLL_NEEDS_A_CHOICE.format(fields=", ".join(state.pending_choices)),
+                )
+
+            forward = self._pick(state, selectors.confirm_forward_labels)
+            if forward is None:
+                return EnrollResult(
+                    code,
+                    EnrollOutcome.ABORTED,
+                    nb.ENROLL_NO_WAY_FORWARD.format(labels=state.labels()),
+                )
+
+            if dry_run:
+                return EnrollResult(
+                    code, EnrollOutcome.ABORTED, nb.ENROLL_DRY_RUN.format(control=forward.label)
+                )
+
+            try:
+                state = self._page.advance_dialog(forward.id)
+            except ConfirmDialogUnrecognised as error:
+                return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+
+        return EnrollResult(
+            code,
+            EnrollOutcome.ABORTED,
+            nb.ENROLL_TOO_MANY_STEPS.format(steps=selectors.max_dialog_steps),
+        )
+
+    def _pick(self, state: DialogState, labels: tuple[str, ...]):
+        negatives = self._config.selectors.confirm_negative_labels
+        safe = tuple(
+            control
+            for control in state.controls
+            if not any(word in control.label for word in negatives)
+        )
+        return DialogState(html=state.html, controls=safe).control_matching(labels)
 
     def _classify_outcome(self, code: CourseCode, outcome_text: str) -> EnrollResult:
         haystack = " ".join(outcome_text.split()).casefold()

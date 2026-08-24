@@ -228,3 +228,7 @@ def _close_quietly(services: Services) -> None:
         services.page.close()
     except Exception:  # noqa: BLE001
         services.logger.debug("kunne ikke lukke nettleseren", exc_info=True)
+
+
+if __name__ == "__main__":
+    app()

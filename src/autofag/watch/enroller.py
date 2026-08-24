@@ -105,9 +105,13 @@ class AutoEnroller:
             return EnrollResult(
                 code, EnrollOutcome.UNVERIFIED, nb.ENROLL_COURSE_MISSING.format(detail=detail)
             )
-        if row.status is RowStatus.ENROLLED or not row.is_takeable:
+        if row.status is RowStatus.ENROLLED:
             return EnrollResult(code, EnrollOutcome.CONFIRMED, nb.ENROLL_VERIFIED_AFTER_DROP)
-        return EnrollResult(code, EnrollOutcome.UNVERIFIED, detail)
+        return EnrollResult(
+            code,
+            EnrollOutcome.UNVERIFIED,
+            nb.ENROLL_STILL_UNVERIFIED.format(detail=detail, status=row.status.value),
+        )
 
     def _unverified_limit_reached(self, code: CourseCode) -> bool:
         unverified = self._ledger.count_state(code, self._run_id, LEDGER_UNVERIFIED)

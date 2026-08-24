@@ -132,7 +132,7 @@ class Watcher:
         self._reschedule(course)
 
     def _apply_observation(self, entry: WatchEntry, row: CourseRow) -> None:
-        changed = entry.last_status is not row.status
+        changed = entry.last_status is not None and entry.last_status is not row.status
         entry.last_status = row.status
         entry.last_status_text = row.status_text
         if changed:

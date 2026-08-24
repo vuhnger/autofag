@@ -157,3 +157,29 @@ def test_second_watch_process_is_refused(config):
         assert "another autofag watch is running" in str(error)
     else:
         raise AssertionError("expected the second watcher to be refused")
+
+
+def test_an_opening_time_is_read_as_local_time_not_utc():
+    from autofag.init_flow import _parse_timestamp
+
+    parsed = _parse_timestamp("2026-08-25 10:00")
+
+    assert parsed is not None
+    assert parsed.utcoffset() is not None
+    assert parsed.strftime("%H:%M") == "10:00"
+
+
+def test_an_interrupted_enroll_is_not_reported_as_a_seat(config):
+    from autofag.models import CourseCode as Code
+
+    harness = build_harness(config)
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.lose_race_on_confirm = True
+    watcher, channel, _ = build_watcher(harness, ["IN5170"])
+
+    watcher.run(max_cycles=1)
+
+    outcomes = [n for n in channel.sent if n.course_code == Code("IN5170")]
+    assert outcomes, "brukeren må få vite hva som skjedde"
+    assert not any("Påmeldt" in n.title for n in outcomes)
+    assert harness.page.enrolled == []

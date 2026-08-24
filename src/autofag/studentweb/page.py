@@ -36,6 +36,28 @@ class SearchFilters:
 
 
 @dataclass(frozen=True, slots=True)
+class DialogControl:
+    id: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class DialogState:
+    html: str
+    controls: tuple[DialogControl, ...] = ()
+    pending_choices: tuple[str, ...] = ()
+
+    def control_matching(self, labels: tuple[str, ...]) -> DialogControl | None:
+        matches = [
+            control for control in self.controls if any(word in control.label for word in labels)
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def labels(self) -> str:
+        return ", ".join(control.label or control.id for control in self.controls) or "ingen"
+
+
+@dataclass(frozen=True, slots=True)
 class RawSearchResult:
     result_html: str
     hit_count_html: str = ""
@@ -52,10 +74,10 @@ class StudentwebPage(Protocol):
 
     def next_page(self) -> RawSearchResult: ...
 
-    def open_confirm_dialog(self, button_id: str) -> str: ...
+    def open_confirm_dialog(self, button_id: str) -> DialogState: ...
 
-    def find_confirm_control(self) -> str: ...
+    def advance_dialog(self, control_id: str) -> DialogState: ...
 
-    def confirm_enrollment(self, confirm_button_id: str) -> str: ...
+    def read_outcome(self) -> str: ...
 
     def close(self) -> None: ...

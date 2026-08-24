@@ -6,6 +6,8 @@ from html import escape
 from autofag.models import RowStatus, SearchCriteria
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
+    DialogControl,
+    DialogState,
     NotAuthenticated,
     PageUnavailable,
     RawSearchResult,
@@ -14,7 +16,9 @@ from autofag.studentweb.page import (
 )
 
 TABLE_ID = "aktiveEmnerForm:sokResultatDataTable"
-CONFIRM_BUTTON_ID = "leggTilEmneForm:leggTilEmneKnapp"
+FORWARD_BUTTON_ID = "leggTilEmneForm:nesteKnapp"
+FINAL_BUTTON_ID = "leggTilEmneForm:fullforKnapp"
+DECLINE_BUTTON_ID = "leggTilEmneForm:onskerIkkeKnapp"
 RELEASE = "636-2026.06.05 16:04"
 PAGE_SIZE = 20
 
@@ -45,8 +49,11 @@ class FakeStudentwebPage:
     courses: list[FakeCourse] = field(default_factory=list)
     logged_in: bool = True
     fail_next_count: int = 0
-    confirm_control_count: int = 1
+    dialog_steps: int = 2
+    pending_choices: tuple[str, ...] = ()
     drop_next_confirm: bool = False
+    lose_race_on_confirm: bool = False
+    offer_forward: bool = True
 
     def __post_init__(self) -> None:
         self.enrolled: list[str] = []
@@ -55,6 +62,8 @@ class FakeStudentwebPage:
         self._last_matches: list[FakeCourse] = []
         self._pending: FakeCourse | None = None
         self._page_index = 0
+        self._step = 0
+        self._outcome = ""
 
     def log_in(self, instructions: str) -> None:
         self.logged_in = True
@@ -91,42 +100,69 @@ class FakeStudentwebPage:
         self._page_index += 1
         return self._render_page()
 
-    def open_confirm_dialog(self, button_id: str) -> str:
+    def open_confirm_dialog(self, button_id: str) -> DialogState:
         self._act("open_confirm_dialog")
         index = _row_index(button_id)
         if index is None or index >= len(self._last_page):
             raise ConfirmDialogUnrecognised("ugyldig rad")
 
-        course = self._last_page[index]
-        self._pending = course
-        controls = "".join(
-            f'<button id="{CONFIRM_BUTTON_ID}{"" if n == 0 else n}">Bekreft</button>'
-            for n in range(self.confirm_control_count)
-        )
-        return (
-            f'<div id="leggTilEmneForm"><p>Meld deg til undervisning i '
-            f"{escape(course.code)} {escape(course.name)}?</p>{controls}"
-            '<button id="leggTilEmneForm:avbrytKnapp">Avbryt</button></div>'
-        )
+        self._pending = self._last_page[index]
+        self._step = 1
+        return self._dialog_state()
 
-    def find_confirm_control(self) -> str:
-        if self.confirm_control_count != 1:
-            raise ConfirmDialogUnrecognised(
-                f"forventet nøyaktig én bekreftknapp, fant {self.confirm_control_count}"
+    def advance_dialog(self, control_id: str) -> DialogState:
+        self._act("advance_dialog")
+        if control_id == DECLINE_BUTTON_ID:
+            raise AssertionError("autofag skal aldri klikke avslagsknappen")
+
+        if control_id == FINAL_BUTTON_ID:
+            if self.lose_race_on_confirm:
+                self.lose_race_on_confirm = False
+                course = self._pending
+                self._pending = None
+                if course is not None:
+                    course.status = RowStatus.DEADLINE_PASSED
+                    course.has_select_button = False
+                raise PageUnavailable("forbindelsen falt, og noen andre tok plassen")
+
+            if self.drop_next_confirm:
+                self.drop_next_confirm = False
+                self._settle_pending()
+                raise PageUnavailable("forbindelsen falt etter at forespørselen var mottatt")
+            course = self._settle_pending()
+            self._outcome = (
+                f"Du har plass på undervisningen i {course.code}."
+                if course
+                else "ingen dialog var åpen"
             )
-        return CONFIRM_BUTTON_ID
+            return DialogState(html=self._outcome)
 
-    def confirm_enrollment(self, confirm_button_id: str) -> str:
-        self._act("confirm_enrollment")
-        if self.drop_next_confirm:
-            self.drop_next_confirm = False
-            self._settle_pending()
-            raise PageUnavailable("forbindelsen falt etter at forespørselen var mottatt")
+        self._step += 1
+        return self._dialog_state()
 
-        course = self._settle_pending()
+    def read_outcome(self) -> str:
+        return self._outcome
+
+    def _dialog_state(self) -> DialogState:
+        course = self._pending
         if course is None:
-            return "ingen dialog var åpen"
-        return f"Du har plass på undervisningen i {course.code}."
+            raise ConfirmDialogUnrecognised("ingen dialog er åpen")
+
+        is_last = self._step >= self.dialog_steps
+        controls = [DialogControl(id=DECLINE_BUTTON_ID, label="ønsker ikke undervisning")]
+        if is_last:
+            controls.append(DialogControl(id=FINAL_BUTTON_ID, label="fullfør"))
+        elif self.offer_forward:
+            controls.append(DialogControl(id=FORWARD_BUTTON_ID, label="neste"))
+
+        return DialogState(
+            html=(
+                f'<div id="leggTilEmneForm">Steg {self._step}: '
+                f"{escape(course.code)} {escape(course.name)}</div>"
+            ),
+            controls=tuple(controls),
+            pending_choices=() if is_last else self.pending_choices,
+        )
 
     def close(self) -> None:
         return None

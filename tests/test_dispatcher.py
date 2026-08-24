@@ -11,8 +11,8 @@ from autofag.storage.db import create_memory_database
 from autofag.storage.repos import DeliveryLog
 
 
-def build(channels, fallback=None):
-    clock = FakeClock()
+def build(channels, fallback=None, clock=None):
+    clock = clock or FakeClock()
     _, session_factory = create_memory_database()
     return NotificationDispatcher(
         channels=channels,
@@ -51,11 +51,24 @@ def test_repeated_low_value_notifications_are_deduped():
     assert len(channel.sent) == 1
 
 
-def test_a_free_spot_is_never_deduped_away():
+def test_a_free_spot_is_not_repeated_every_poll():
     channel = RecordingChannel()
-    dispatcher = build([channel])
+    clock = FakeClock()
+    dispatcher = build([channel], clock=clock)
 
     dispatcher.dispatch(notification(NotificationKind.AVAILABLE))
+    dispatcher.dispatch(notification(NotificationKind.AVAILABLE))
+
+    assert len(channel.sent) == 1
+
+
+def test_a_free_spot_is_announced_again_once_the_window_has_passed():
+    channel = RecordingChannel()
+    clock = FakeClock()
+    dispatcher = build([channel], clock=clock)
+
+    dispatcher.dispatch(notification(NotificationKind.AVAILABLE))
+    clock.advance(AppConfig().notify.dedupe_window_seconds + 1)
     dispatcher.dispatch(notification(NotificationKind.AVAILABLE))
 
     assert len(channel.sent) == 2

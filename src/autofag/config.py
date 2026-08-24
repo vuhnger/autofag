@@ -53,16 +53,27 @@ class SelectorConfig(BaseModel):
     confirm_form_marker: str = "leggTilEmneForm"
     teaching_section_labels: tuple[str, ...] = ("Undervisning", "Teaching")
     exam_section_labels: tuple[str, ...] = ("Eksamen", "Examination", "Eksamen/vurdering")
-    confirm_positive_labels: tuple[str, ...] = (
-        "ja",
+    confirm_forward_labels: tuple[str, ...] = ("neste", "next", "fortsett", "continue")
+    confirm_final_labels: tuple[str, ...] = (
+        "fullfør",
+        "fullfor",
         "bekreft",
         "lagre",
-        "legg til",
-        "meld",
-        "ok",
-        "fortsett",
+        "meld deg",
+        "meld meg",
+        "finish",
     )
-    confirm_negative_labels: tuple[str, ...] = ("avbryt", "nei", "lukk", "cancel")
+    confirm_negative_labels: tuple[str, ...] = (
+        "avbryt",
+        "nei",
+        "lukk",
+        "cancel",
+        "ønsker ikke",
+        "onsker ikke",
+        "tilbake",
+        "trekk",
+    )
+    max_dialog_steps: int = 6
     header_label_class: str = "header"
     detail_toggle_class: str = "skalKunneTogglesContainer"
     paginator_next_class: str = "ui-paginator-next"

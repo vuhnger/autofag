@@ -48,7 +48,7 @@ def test_enroll_re_searches_before_confirming(harness):
     harness.page.advance_to_takeable("IN5170")
     harness.session.enroll(CourseCode("IN5170"), term="2026H")
     assert harness.page.actions.count("search") >= 1
-    assert harness.page.actions.index("search") < harness.page.actions.index("confirm_enrollment")
+    assert harness.page.actions.index("search") < harness.page.actions.index("open_confirm_dialog")
 
 
 def test_enrolled_course_is_no_longer_takeable(harness):
@@ -67,12 +67,30 @@ def test_dry_run_stops_before_confirming(harness):
     assert harness.page.enrolled == []
 
 
-def test_an_ambiguous_confirm_dialog_aborts_instead_of_guessing(harness):
+def test_a_dialog_with_no_safe_way_forward_aborts(harness):
     harness.page.advance_to_takeable("IN5170")
-    harness.page.confirm_control_count = 2
+    harness.page.offer_forward = False
     result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
     assert result.outcome is EnrollOutcome.ABORTED
+    assert "ingen trygg knapp" in result.detail
     assert harness.page.enrolled == []
+
+
+def test_a_dialog_that_needs_a_choice_is_left_to_the_human(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.pending_choices = ("undervisningsparti",)
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+    assert result.outcome is EnrollOutcome.ABORTED
+    assert "undervisningsparti" in result.detail
+    assert harness.page.enrolled == []
+
+
+def test_a_multi_step_dialog_is_walked_to_the_end(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.dialog_steps = 3
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+    assert result.outcome is EnrollOutcome.CONFIRMED
+    assert harness.page.actions.count("advance_dialog") == 3
 
 
 def test_lost_login_is_reported_not_swallowed(config):
@@ -98,10 +116,15 @@ def test_hourly_cap_stops_the_paced_page(config):
 
 def test_a_dialog_that_names_another_course_aborts_and_says_what_it_saw(harness, monkeypatch):
     harness.page.advance_to_takeable("IN5170")
+    from autofag.studentweb.page import DialogControl, DialogState
+
     monkeypatch.setattr(
         harness.page,
         "open_confirm_dialog",
-        lambda button_id: '<div id="leggTilEmneForm">Meld deg til IN9999?</div>',
+        lambda button_id: DialogState(
+            html='<div id="leggTilEmneForm">Meld deg til IN9999?</div>',
+            controls=(DialogControl(id="x", label="fullfør"),),
+        ),
     )
 
     result = harness.session.enroll(CourseCode("IN5170"), term="2026H")

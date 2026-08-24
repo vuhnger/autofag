@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from logging import Logger
+from pathlib import Path
 
 from autofag import strings_nb as nb
 from autofag.clock import Clock
@@ -58,6 +59,7 @@ class InitWizard:
         clock: Clock,
         logger: Logger,
         dispatcher_factory,
+        config_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
         self._session = session
@@ -69,6 +71,7 @@ class InitWizard:
         self._clock = clock
         self._logger = logger
         self._dispatcher_factory = dispatcher_factory
+        self._config_path = config_path
         self._dry_run = dry_run
 
     def run(self) -> InitOutcome:
@@ -84,7 +87,7 @@ class InitWizard:
 
         for entry in entries:
             self._watchlist.upsert(entry)
-        save_config(self._config)
+        save_config(self._config, self._config_path)
 
         self._presenter.info(nb.WATCH_STARTED.format(count=len(entries)))
         return InitOutcome(entries=entries, channels=channels, started=True)
@@ -205,9 +208,7 @@ class InitWizard:
         elif name == "email":
             notify.email.enabled = True
             notify.email.host = self._prompter.text(nb.CHANNEL_EMAIL_HOST, notify.email.host)
-            notify.email.port = int(
-                self._prompter.text(nb.CHANNEL_EMAIL_PORT, str(notify.email.port)) or 587
-            )
+            notify.email.port = self._ask_port(notify.email.port)
             notify.email.username = self._prompter.text(nb.CHANNEL_EMAIL_USERNAME)
             notify.email.sender = notify.email.username
             notify.email.recipients = (self._prompter.text(nb.CHANNEL_EMAIL_RECIPIENT),)
@@ -222,6 +223,16 @@ class InitWizard:
             notify.sms.to_numbers = (self._prompter.text(nb.CHANNEL_SMS_TO),)
         elif name == "macos":
             notify.macos.enabled = True
+
+    def _ask_port(self, current: int) -> int:
+        while True:
+            answer = self._prompter.text(nb.CHANNEL_EMAIL_PORT, str(current)).strip()
+            if not answer:
+                return current
+            try:
+                return int(answer)
+            except ValueError:
+                self._presenter.warn(nb.CHANNEL_PORT_NOT_A_NUMBER.format(answer=answer))
 
     def _disable_channel(self, name: str) -> None:
         notify = self._config.notify
@@ -275,9 +286,10 @@ class InitWizard:
 def _parse_timestamp(value: str) -> datetime | None:
     for pattern in TIMESTAMP_FORMATS:
         try:
-            return datetime.strptime(value, pattern).replace(tzinfo=UTC)
+            naive = datetime.strptime(value, pattern)
         except ValueError:
             continue
+        return naive.astimezone()
     return None
 
 

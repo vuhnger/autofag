@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeout
+from concurrent.futures import ThreadPoolExecutor, wait
 from logging import Logger
 
 from autofag import strings_nb as nb
@@ -12,9 +11,7 @@ from autofag.models import DeliveryResult, Notification, NotificationKind, Sever
 from autofag.notify.protocol import NotificationChannel
 from autofag.storage.repos import DeliveryLog
 
-ALWAYS_DELIVER = frozenset(
-    {NotificationKind.TEST, NotificationKind.AVAILABLE, NotificationKind.ENROLL_OUTCOME}
-)
+ALWAYS_DELIVER = frozenset({NotificationKind.TEST, NotificationKind.ENROLL_OUTCOME})
 
 
 class NotificationDispatcher:
@@ -61,19 +58,25 @@ class NotificationDispatcher:
         )
 
     def _fan_out(self, notification: Notification) -> list[DeliveryResult]:
-        results: list[DeliveryResult] = []
-        with ThreadPoolExecutor(max_workers=max(1, len(self._channels))) as pool:
-            futures = {
-                pool.submit(self._send_one, channel, notification): channel
-                for channel in self._channels
-            }
-            for future, channel in futures.items():
-                try:
-                    results.append(future.result(timeout=self._config.channel_timeout_seconds))
-                except FutureTimeout:
-                    results.append(DeliveryResult(channel.name, False, "timed out"))
-                except Exception as error:
-                    results.append(DeliveryResult(channel.name, False, repr(error)))
+        pool = ThreadPoolExecutor(max_workers=max(1, len(self._channels)))
+        futures = {
+            pool.submit(self._send_one, channel, notification): channel
+            for channel in self._channels
+        }
+        done, _ = wait(futures, timeout=self._config.channel_timeout_seconds)
+
+        results = []
+        for future, channel in futures.items():
+            if future not in done:
+                future.cancel()
+                results.append(DeliveryResult(channel.name, False, "tok for lang tid"))
+                continue
+            try:
+                results.append(future.result())
+            except Exception as error:  # noqa: BLE001
+                results.append(DeliveryResult(channel.name, False, repr(error)))
+
+        pool.shutdown(wait=False)
         return results
 
     def _send_one(self, channel: NotificationChannel, notification: Notification) -> DeliveryResult:

@@ -12,6 +12,7 @@ from autofag.models import SearchCriteria
 from autofag.storage.repos import BudgetStore
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
+    DialogState,
     NotAuthenticated,
     PageUnavailable,
     RawSearchResult,
@@ -60,16 +61,14 @@ class PacedStudentwebPage:
     def next_page(self) -> RawSearchResult:
         return self._paced("next_page", self._page.next_page)
 
-    def open_confirm_dialog(self, button_id: str) -> str:
+    def open_confirm_dialog(self, button_id: str) -> DialogState:
         return self._paced("open_confirm_dialog", lambda: self._page.open_confirm_dialog(button_id))
 
-    def find_confirm_control(self) -> str:
-        return self._page.find_confirm_control()
+    def advance_dialog(self, control_id: str) -> DialogState:
+        return self._paced("advance_dialog", lambda: self._page.advance_dialog(control_id))
 
-    def confirm_enrollment(self, confirm_button_id: str) -> str:
-        return self._paced(
-            "confirm_enrollment", lambda: self._page.confirm_enrollment(confirm_button_id)
-        )
+    def read_outcome(self) -> str:
+        return self._page.read_outcome()
 
     def close(self) -> None:
         self._page.close()

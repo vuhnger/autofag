@@ -90,7 +90,14 @@ class SmtplibSender:
 
 
 class SmtpEmailChannel:
-    def __init__(self, sender: SmtpSender, config: EmailConfig, secrets: SecretStore) -> None:
+    def __init__(
+        self,
+        sender: SmtpSender,
+        config: EmailConfig,
+        secrets: SecretStore,
+        timeout_seconds: float = 15.0,
+    ) -> None:
+        self._timeout_seconds = timeout_seconds
         self._sender = sender
         self._config = config
         self._secrets = secrets
@@ -115,7 +122,7 @@ class SmtpEmailChannel:
                 recipients=self._config.recipients,
                 subject=notification.title,
                 body=notification.body,
-                timeout=30.0,
+                timeout=self._timeout_seconds,
             )
         except OSError as error:
             return DeliveryResult(self.name, False, str(error))

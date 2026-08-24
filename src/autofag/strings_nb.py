@@ -137,3 +137,12 @@ UNEXPECTED_ERROR = (
 INTERRUPTED = "Stoppet."
 SEARCH_FAILED = "Søket feilet: {reason}. Prøv igjen, eller trykk Ctrl+C for å avslutte."
 WATCH_CRASHED = "Overvåkingen stoppet: {reason}"
+
+ENROLL_NEEDS_A_CHOICE = (
+    "dialogen krever et valg autofag ikke tar for deg ({fields}). Fullfør påmeldingen manuelt."
+)
+ENROLL_NO_WAY_FORWARD = "fant ingen trygg knapp å gå videre med. Kontroller i dialogen: {labels}"
+ENROLL_TOO_MANY_STEPS = "dialogen tok mer enn {steps} steg, stoppet for sikkerhets skyld"
+
+CHANNEL_PORT_NOT_A_NUMBER = "{answer} er ikke et portnummer. Skriv bare tallet, for eksempel 587."
+ENROLL_STILL_UNVERIFIED = "{detail}; emnet står som {status}, så plassen er ikke bekreftet"

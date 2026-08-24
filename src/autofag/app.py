@@ -49,11 +49,12 @@ class Services:
     delivery_log: DeliveryLog
     run_lock: RunLock
     presenter: Presenter
+    outbound_http: OutboundHttpClient
     run_id: str
 
     def dispatcher(self, channel_names: list[str] | None = None) -> NotificationDispatcher:
         return NotificationDispatcher(
-            channels=build_channels(self.config, self.secrets, channel_names),
+            channels=build_channels(self.config, self.secrets, channel_names, self.outbound_http),
             delivery_log=self.delivery_log,
             config=self.config.notify,
             clock=self.clock,
@@ -98,6 +99,7 @@ def build_services(config: AppConfig, verbose: bool = False) -> Services:
         delivery_log=DeliveryLog(session_factory, clock),
         run_lock=RunLock(session_factory, clock),
         presenter=presenter,
+        outbound_http=OutboundHttpClient(config.studentweb, config.notify.channel_timeout_seconds),
         run_id=uuid.uuid4().hex,
     )
 
@@ -114,12 +116,20 @@ def _build_page(config: AppConfig, logger: Logger, presenter: Presenter) -> Stud
 
 
 def build_channels(
-    config: AppConfig, secrets: SecretStore, only: list[str] | None = None
+    config: AppConfig,
+    secrets: SecretStore,
+    only: list[str] | None = None,
+    http: OutboundHttpClient | None = None,
 ) -> list[NotificationChannel]:
-    http = OutboundHttpClient(config.studentweb, config.notify.channel_timeout_seconds)
+    http = http or OutboundHttpClient(config.studentweb, config.notify.channel_timeout_seconds)
     candidates: dict[str, NotificationChannel] = {
         "ntfy": NtfyChannel(http, config.notify.ntfy, secrets),
-        "email": SmtpEmailChannel(SmtplibSender(), config.notify.email, secrets),
+        "email": SmtpEmailChannel(
+            SmtplibSender(),
+            config.notify.email,
+            secrets,
+            config.notify.channel_timeout_seconds,
+        ),
         "sms": TwilioSmsChannel(http, config.notify.sms, secrets),
         "macos": MacOsNotificationChannel(SubprocessRunner(), config.notify.macos),
     }

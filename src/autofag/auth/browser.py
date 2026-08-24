@@ -14,6 +14,8 @@ from autofag.config import AppConfig
 from autofag.models import SearchCriteria
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
+    DialogControl,
+    DialogState,
     NotAuthenticated,
     PageUnavailable,
     ProfileInUse,
@@ -68,7 +70,7 @@ DIALOG_IS_READY = """
 }
 """
 
-READ_VISIBLE_DIALOG = """
+UNUSED_READ_VISIBLE_DIALOG = """
 (marker) => {
   const node = [...document.querySelectorAll('[id]')]
     .filter(el => el.id.includes(marker))
@@ -90,6 +92,21 @@ DESCRIBE_DIALOG_CANDIDATES = """
 }
 """
 
+LOOKS_LIKE_LOGIN = """
+(markers) => {
+  const html = document.documentElement.innerHTML;
+  return markers.some(marker => html.includes(marker));
+}
+"""
+
+CLICK_BY_ID = """
+(id) => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error('elementet ' + id + ' finnes ikke lenger');
+  el.click();
+}
+"""
+
 HAS_NEXT_PAGE = """
 (className) => {
   return [...document.getElementsByClassName(className)]
@@ -107,16 +124,36 @@ CLICK_NEXT_PAGE = """
 }
 """
 
-FIND_CONFIRM_CONTROL = """
-(args) => {
+READ_DIALOG_STATE = """
+(marker) => {
   const owner = [...document.querySelectorAll('[id]')]
-    .filter(node => node.id.includes(args.marker))
+    .filter(node => node.id.includes(marker))
     .find(node => node.offsetParent !== null && (node.innerText || '').trim().length > 0);
-  if (!owner) return [];
+  if (!owner) return null;
   const dialog = owner.closest('.ui-dialog') || owner;
-  return [...dialog.querySelectorAll('button, input[type=submit], a[id]')]
+
+  const controls = [...dialog.querySelectorAll('button, input[type=submit], a[id]')]
     .filter(el => el.id && el.offsetParent !== null)
     .map(el => ({id: el.id, label: (el.innerText || el.value || '').trim().toLowerCase()}));
+
+  const pending = [];
+  for (const group of dialog.querySelectorAll('select')) {
+    if (group.offsetParent !== null && !group.value) {
+      pending.push((group.name || group.id || 'nedtrekksliste').toLowerCase());
+    }
+  }
+  const radios = {};
+  for (const radio of dialog.querySelectorAll('input[type=radio]')) {
+    if (radio.offsetParent === null) continue;
+    const key = radio.name || radio.id;
+    radios[key] = radios[key] || false;
+    if (radio.checked) radios[key] = true;
+  }
+  for (const [key, checked] of Object.entries(radios)) {
+    if (!checked) pending.push(String(key).toLowerCase());
+  }
+
+  return {html: dialog.outerHTML, controls: controls, pending: pending};
 }
 """
 
@@ -179,17 +216,31 @@ class PlaywrightStudentwebPage:
     def next_page(self) -> RawSearchResult:
         page = self._ensure_page()
         selectors = self._config.selectors
-        with page.expect_response(self._is_postback):
-            moved = page.evaluate(CLICK_NEXT_PAGE, selectors.paginator_next_class)
-        if not moved:
+        if not page.evaluate(HAS_NEXT_PAGE, selectors.paginator_next_class):
             raise PageUnavailable("det finnes ingen neste side")
+
+        with page.expect_response(self._is_postback, timeout=30000):
+            page.evaluate(CLICK_NEXT_PAGE, selectors.paginator_next_class)
         return self._read_result(page, page_index=1)
 
-    def open_confirm_dialog(self, button_id: str) -> str:
+    def open_confirm_dialog(self, button_id: str) -> DialogState:
         page = self._ensure_page()
-        marker = self._config.selectors.confirm_form_marker
         self._click_and_wait(page, button_id)
+        return self._read_dialog(page)
 
+    def advance_dialog(self, control_id: str) -> DialogState:
+        page = self._ensure_page()
+        self._click_and_wait(page, control_id)
+        try:
+            return self._read_dialog(page)
+        except ConfirmDialogUnrecognised:
+            return DialogState(html=page.inner_text("body"))
+
+    def read_outcome(self) -> str:
+        return self._ensure_page().inner_text("body")
+
+    def _read_dialog(self, page: Page) -> DialogState:
+        marker = self._config.selectors.confirm_form_marker
         try:
             page.wait_for_function(DIALOG_IS_READY, arg=marker, timeout=15000)
         except PlaywrightTimeout as error:
@@ -198,34 +249,18 @@ class PlaywrightStudentwebPage:
                 f"bekreftelsesdialogen ble aldri synlig. Noder med {marker!r}: {seen}"
             ) from error
 
-        dialog = page.evaluate(READ_VISIBLE_DIALOG, marker)
-        if not dialog:
+        raw = page.evaluate(READ_DIALOG_STATE, marker)
+        if not raw:
             raise ConfirmDialogUnrecognised("bekreftelsesdialogen dukket aldri opp")
-        return dialog
 
-    def find_confirm_control(self) -> str:
-        page = self._ensure_page()
-        selectors = self._config.selectors
-        controls = page.evaluate(FIND_CONFIRM_CONTROL, {"marker": selectors.confirm_form_marker})
-        self._logger.debug("kontroller i bekreftelsesdialogen: %s", controls)
-        candidates = [
-            control["id"]
-            for control in controls
-            if any(word in control["label"] for word in selectors.confirm_positive_labels)
-            and not any(word in control["label"] for word in selectors.confirm_negative_labels)
-        ]
-        if len(candidates) != 1:
-            seen = ", ".join(sorted({c["label"] or c["id"] for c in controls})) or "ingen"
-            raise ConfirmDialogUnrecognised(
-                f"forventet nøyaktig én bekreftknapp, fant {len(candidates)}. "
-                f"Kontroller i dialogen: {seen}"
-            )
-        return candidates[0]
-
-    def confirm_enrollment(self, confirm_button_id: str) -> str:
-        page = self._ensure_page()
-        self._click_and_wait(page, confirm_button_id)
-        return page.inner_text("body")
+        self._logger.debug("dialogsteg: %s", raw["controls"])
+        return DialogState(
+            html=raw["html"],
+            controls=tuple(
+                DialogControl(id=item["id"], label=item["label"]) for item in raw["controls"]
+            ),
+            pending_choices=tuple(raw["pending"]),
+        )
 
     def close(self) -> None:
         if self._context is not None:
@@ -274,7 +309,9 @@ class PlaywrightStudentwebPage:
         return self._page
 
     def _is_on_courses_page(self, page: Page) -> bool:
-        return self._config.auth.logged_in_marker in page.url
+        if self._config.auth.logged_in_marker not in page.url:
+            return False
+        return not page.evaluate(LOOKS_LIKE_LOGIN, list(self._config.selectors.login_markers))
 
     def _postback_url(self) -> str:
         return self._config.studentweb.courses_path
@@ -285,9 +322,11 @@ class PlaywrightStudentwebPage:
     def _click_and_wait(self, page: Page, element_id: str) -> None:
         try:
             with page.expect_response(self._is_postback, timeout=30000):
-                page.evaluate("(id) => document.getElementById(id).click()", element_id)
+                page.evaluate(CLICK_BY_ID, element_id)
         except PlaywrightTimeout as error:
             raise PageUnavailable(f"Studentweb svarte ikke på klikk mot {element_id}") from error
+        except PlaywrightError as error:
+            raise PageUnavailable(f"kunne ikke klikke {element_id}: {error}") from error
         page.wait_for_timeout(250)
 
     def _fill(self, page: Page, suffix: str, value: str) -> None:
