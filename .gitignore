@@ -16,3 +16,8 @@ FEASIBILITY.md
 *.sqlite3
 configs/local.yaml
 .env
+
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
