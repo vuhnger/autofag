@@ -64,6 +64,9 @@ class PacedStudentwebPage:
     def open_confirm_dialog(self, button_id: str) -> DialogState:
         return self._paced("open_confirm_dialog", lambda: self._page.open_confirm_dialog(button_id))
 
+    def choose(self, select_id: str, value: str) -> DialogState:
+        return self._paced("choose", lambda: self._page.choose(select_id, value))
+
     def advance_dialog(self, control_id: str) -> DialogState:
         return self._paced("advance_dialog", lambda: self._page.advance_dialog(control_id))
 

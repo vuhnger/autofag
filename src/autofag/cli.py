@@ -11,11 +11,15 @@ from autofag.app import Services, build_services
 from autofag.config import load_config
 from autofag.errors import guarded
 from autofag.init_flow import InitWizard, WizardAborted
-from autofag.models import SearchCriteria
+from autofag.models import CourseCode, SearchCriteria
 from autofag.presentation import RichPresenter
 from autofag.prompts import PromptAborted, QuestionaryPrompter
 from autofag.storage.repos import RunAlreadyActive
-from autofag.studentweb.page import NotAuthenticated, PageUnavailable
+from autofag.studentweb.page import (
+    ConfirmDialogUnrecognised,
+    NotAuthenticated,
+    PageUnavailable,
+)
 from autofag.transport.errors import TransportError
 from autofag.watch.enroller import AutoEnroller
 from autofag.watch.watcher import Watcher
@@ -130,6 +134,61 @@ def doctor(
     services.presenter.info(
         nb.DOCTOR_CHANNELS.format(channels=", ".join(services.dispatcher().channel_names) or "-")
     )
+
+
+@app.command()
+@guarded
+def preview(
+    course: Annotated[str, typer.Argument(help="Emnekode å åpne dialogen for")],
+    config_path: ConfigOption = None,
+) -> None:
+    services = build_services(load_config(config_path))
+    _authenticate(services)
+
+    code = CourseCode(course)
+    try:
+        steps = services.session.preview_enrollment(code)
+    except (ConfirmDialogUnrecognised, PageUnavailable, TransportError) as error:
+        services.presenter.warn(str(error))
+        raise typer.Exit(code=1) from error
+
+    services.presenter.info(nb.PREVIEW_HEADER.format(code=code))
+    for number, state in enumerate(steps, start=1):
+        services.presenter.table(
+            nb.PREVIEW_STEP.format(step=number),
+            (nb.PREVIEW_CONTROLS, nb.PREVIEW_CHOICES),
+            [
+                (
+                    state.labels(),
+                    "; ".join(
+                        f"{item.label}: {', '.join(option.label for option in item.options)}"
+                        for item in state.selects
+                    )
+                    or "-",
+                )
+            ],
+        )
+    services.presenter.info(nb.PREVIEW_HOWTO.format(code=code))
+
+
+@app.command()
+@guarded
+def choose(
+    course: Annotated[str, typer.Argument(help="Emnekode")],
+    field: Annotated[str, typer.Argument(help="Feltet i dialogen")],
+    value: Annotated[str, typer.Argument(help="Verdien autofag skal velge")],
+    config_path: ConfigOption = None,
+) -> None:
+    services = build_services(load_config(config_path))
+    code = CourseCode(course)
+    entry = next((item for item in services.watchlist.all_entries() if item.code == code), None)
+    if entry is None:
+        services.presenter.warn(nb.CHOICE_UNKNOWN_COURSE.format(code=code))
+        raise typer.Exit(code=1)
+
+    entry.dialog_choices[field.strip().casefold()] = value
+    services.watchlist.upsert(entry)
+    services.presenter.info(nb.CHOICE_SAVED.format(code=code, field=field, value=value))
 
 
 @app.command()

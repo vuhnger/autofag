@@ -7,6 +7,8 @@ from autofag.models import RowStatus, SearchCriteria
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
     DialogControl,
+    DialogOption,
+    DialogSelect,
     DialogState,
     NotAuthenticated,
     PageUnavailable,
@@ -50,7 +52,7 @@ class FakeStudentwebPage:
     logged_in: bool = True
     fail_next_count: int = 0
     dialog_steps: int = 2
-    pending_choices: tuple[str, ...] = ()
+    select_options: tuple[str, ...] = ()
     drop_next_confirm: bool = False
     lose_race_on_confirm: bool = False
     offer_forward: bool = True
@@ -64,6 +66,7 @@ class FakeStudentwebPage:
         self._page_index = 0
         self._step = 0
         self._outcome = ""
+        self._chosen: dict[str, str] = {}
 
     def log_in(self, instructions: str) -> None:
         self.logged_in = True
@@ -108,6 +111,11 @@ class FakeStudentwebPage:
 
         self._pending = self._last_page[index]
         self._step = 1
+        return self._dialog_state()
+
+    def choose(self, select_id: str, value: str) -> DialogState:
+        self._act("choose")
+        self._chosen[select_id] = value
         return self._dialog_state()
 
     def advance_dialog(self, control_id: str) -> DialogState:
@@ -155,13 +163,27 @@ class FakeStudentwebPage:
         elif self.offer_forward:
             controls.append(DialogControl(id=FORWARD_BUTTON_ID, label="neste"))
 
+        selects: tuple[DialogSelect, ...] = ()
+        if not is_last and self.select_options:
+            select_id = f"leggTilEmneForm:parti{self._step}"
+            selects = (
+                DialogSelect(
+                    id=select_id,
+                    label="undervisningsparti",
+                    options=tuple(
+                        DialogOption(value=label, label=label) for label in self.select_options
+                    ),
+                    selected=self._chosen.get(select_id, ""),
+                ),
+            )
+
         return DialogState(
             html=(
                 f'<div id="leggTilEmneForm">Steg {self._step}: '
                 f"{escape(course.code)} {escape(course.name)}</div>"
             ),
             controls=tuple(controls),
-            pending_choices=() if is_last else self.pending_choices,
+            selects=selects,
         )
 
     def close(self) -> None:

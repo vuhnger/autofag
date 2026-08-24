@@ -42,10 +42,46 @@ class DialogControl:
 
 
 @dataclass(frozen=True, slots=True)
+class DialogOption:
+    value: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class DialogSelect:
+    id: str
+    label: str
+    options: tuple[DialogOption, ...]
+    selected: str
+
+    @property
+    def needs_a_choice(self) -> bool:
+        return not self.selected
+
+    @property
+    def only_option(self) -> DialogOption | None:
+        return self.options[0] if len(self.options) == 1 else None
+
+    def option_matching(self, wanted: str) -> DialogOption | None:
+        needle = wanted.casefold()
+        for option in self.options:
+            if needle in (option.value.casefold(), option.label.casefold()):
+                return option
+        for option in self.options:
+            if needle in option.label.casefold():
+                return option
+        return None
+
+
+@dataclass(frozen=True, slots=True)
 class DialogState:
     html: str
     controls: tuple[DialogControl, ...] = ()
-    pending_choices: tuple[str, ...] = ()
+    selects: tuple[DialogSelect, ...] = ()
+
+    @property
+    def unresolved_selects(self) -> tuple[DialogSelect, ...]:
+        return tuple(item for item in self.selects if item.needs_a_choice)
 
     def control_matching(self, labels: tuple[str, ...]) -> DialogControl | None:
         matches = [
@@ -75,6 +111,8 @@ class StudentwebPage(Protocol):
     def next_page(self) -> RawSearchResult: ...
 
     def open_confirm_dialog(self, button_id: str) -> DialogState: ...
+
+    def choose(self, select_id: str, value: str) -> DialogState: ...
 
     def advance_dialog(self, control_id: str) -> DialogState: ...
 

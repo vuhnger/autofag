@@ -146,3 +146,19 @@ ENROLL_TOO_MANY_STEPS = "dialogen tok mer enn {steps} steg, stoppet for sikkerhe
 
 CHANNEL_PORT_NOT_A_NUMBER = "{answer} er ikke et portnummer. Skriv bare tallet, for eksempel 587."
 ENROLL_STILL_UNVERIFIED = "{detail}; emnet står som {status}, så plassen er ikke bekreftet"
+
+ENROLL_CHOICE_NEEDED = (
+    "dialogen krever et valg autofag ikke tar for deg: {field}.\n"
+    "Alternativer: {options}. Sett ønsket verdi på emnet i watchlisten."
+)
+
+PREVIEW_NOT_TAKEABLE = "{code} har ingen ledig plass akkurat nå, så dialogen kan ikke åpnes."
+PREVIEW_HEADER = "Påmeldingsdialogen for {code}"
+PREVIEW_STEP = "Steg {step}"
+PREVIEW_CONTROLS = "Knapper"
+PREVIEW_CHOICES = "Valg"
+PREVIEW_HOWTO = (
+    'Ingenting ble bekreftet. Sett et valg med:\n  autofag choose {code} "<felt>" "<verdi>"'
+)
+CHOICE_SAVED = "Lagret: {code} velger {value} for {field}."
+CHOICE_UNKNOWN_COURSE = "{code} står ikke i watchlisten."

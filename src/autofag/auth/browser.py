@@ -15,6 +15,8 @@ from autofag.models import SearchCriteria
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
     DialogControl,
+    DialogOption,
+    DialogSelect,
     DialogState,
     NotAuthenticated,
     PageUnavailable,
@@ -136,24 +138,35 @@ READ_DIALOG_STATE = """
     .filter(el => el.id && el.offsetParent !== null)
     .map(el => ({id: el.id, label: (el.innerText || el.value || '').trim().toLowerCase()}));
 
-  const pending = [];
-  for (const group of dialog.querySelectorAll('select')) {
-    if (group.offsetParent !== null && !group.value) {
-      pending.push((group.name || group.id || 'nedtrekksliste').toLowerCase());
-    }
-  }
-  const radios = {};
-  for (const radio of dialog.querySelectorAll('input[type=radio]')) {
-    if (radio.offsetParent === null) continue;
-    const key = radio.name || radio.id;
-    radios[key] = radios[key] || false;
-    if (radio.checked) radios[key] = true;
-  }
-  for (const [key, checked] of Object.entries(radios)) {
-    if (!checked) pending.push(String(key).toLowerCase());
-  }
+  const labelFor = (select) => {
+    const labelled = select.labels && select.labels.length ? select.labels[0].innerText : '';
+    const described = select.getAttribute('aria-label') || '';
+    return (labelled || described || select.name || select.id).trim().toLowerCase();
+  };
 
-  return {html: dialog.outerHTML, controls: controls, pending: pending};
+  const selects = [...dialog.querySelectorAll('select')]
+    .filter(el => el.id || el.name)
+    .map(el => ({
+      id: el.id || el.name,
+      label: labelFor(el),
+      selected: el.value || '',
+      options: [...el.options]
+        .filter(option => option.value)
+        .map(option => ({value: option.value, label: option.text.trim()})),
+    }));
+
+  return {html: dialog.outerHTML, controls: controls, selects: selects};
+}
+"""
+
+CHOOSE_OPTION = """
+(args) => {
+  const el = document.getElementById(args.id)
+    || document.querySelector('[name="' + args.id + '"]');
+  if (!el) throw new Error('nedtrekkslisten ' + args.id + ' finnes ikke');
+  el.value = args.value;
+  el.dispatchEvent(new Event('input', {bubbles: true}));
+  el.dispatchEvent(new Event('change', {bubbles: true}));
 }
 """
 
@@ -228,6 +241,15 @@ class PlaywrightStudentwebPage:
         self._click_and_wait(page, button_id)
         return self._read_dialog(page)
 
+    def choose(self, select_id: str, value: str) -> DialogState:
+        page = self._ensure_page()
+        try:
+            page.evaluate(CHOOSE_OPTION, {"id": select_id, "value": value})
+        except PlaywrightError as error:
+            raise ConfirmDialogUnrecognised(f"kunne ikke velge i {select_id}: {error}") from error
+        page.wait_for_timeout(200)
+        return self._read_dialog(page)
+
     def advance_dialog(self, control_id: str) -> DialogState:
         page = self._ensure_page()
         self._click_and_wait(page, control_id)
@@ -253,13 +275,24 @@ class PlaywrightStudentwebPage:
         if not raw:
             raise ConfirmDialogUnrecognised("bekreftelsesdialogen dukket aldri opp")
 
-        self._logger.debug("dialogsteg: %s", raw["controls"])
+        self._logger.debug("dialogsteg: %s", raw)
         return DialogState(
             html=raw["html"],
             controls=tuple(
                 DialogControl(id=item["id"], label=item["label"]) for item in raw["controls"]
             ),
-            pending_choices=tuple(raw["pending"]),
+            selects=tuple(
+                DialogSelect(
+                    id=item["id"],
+                    label=item["label"],
+                    options=tuple(
+                        DialogOption(value=option["value"], label=option["label"])
+                        for option in item["options"]
+                    ),
+                    selected=item["selected"],
+                )
+                for item in raw["selects"]
+            ),
         )
 
     def close(self) -> None:

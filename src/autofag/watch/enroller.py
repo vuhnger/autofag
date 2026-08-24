@@ -50,7 +50,9 @@ class AutoEnroller:
         self._run_id = run_id
         self._dry_run = dry_run
 
-    def enroll(self, row: CourseRow, term: str) -> EnrollResult:
+    def enroll(
+        self, row: CourseRow, term: str, choices: dict[str, str] | None = None
+    ) -> EnrollResult:
         code = row.code
 
         if not self._config.enabled:
@@ -60,17 +62,19 @@ class AutoEnroller:
         if self._unverified_limit_reached(code):
             return EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_TOO_MANY_UNVERIFIED)
 
-        result = self._attempt_sequence(code, term)
+        result = self._attempt_sequence(code, term, choices or {})
         self._dispatcher.dispatch(self._outcome_notification(row, result))
         return result
 
-    def _attempt_sequence(self, code: CourseCode, term: str) -> EnrollResult:
+    def _attempt_sequence(
+        self, code: CourseCode, term: str, choices: dict[str, str]
+    ) -> EnrollResult:
         last = EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_NO_ATTEMPT)
 
         for attempt in range(self._config.max_sequence_attempts):
             ledger_id = self._ledger.record_attempt(code, term, self._run_id)
             try:
-                last = self._session.enroll(code, term, dry_run=self._dry_run)
+                last = self._session.enroll(code, term, dry_run=self._dry_run, choices=choices)
             except TransportError as error:
                 self._ledger.settle(ledger_id, LEDGER_UNVERIFIED, str(error))
                 self._logger.warning(

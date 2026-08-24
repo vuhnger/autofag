@@ -37,6 +37,7 @@ class WatchEntryRow(Base):
         DateTime(timezone=True), default=None
     )
     stopped_reason: Mapped[str | None] = mapped_column(Text, default=None)
+    dialog_choices: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

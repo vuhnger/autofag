@@ -19,6 +19,7 @@ from autofag.models import (
 )
 from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
+    DialogSelect,
     DialogState,
     RawSearchResult,
     SearchFilters,
@@ -68,11 +69,19 @@ class StudentwebSession:
         with self._lock:
             return self._parse(self._page.next_page())[0]
 
-    def enroll(self, code: CourseCode, term: str, dry_run: bool = False) -> EnrollResult:
+    def enroll(
+        self,
+        code: CourseCode,
+        term: str,
+        dry_run: bool = False,
+        choices: dict[str, str] | None = None,
+    ) -> EnrollResult:
         with self._lock:
-            return self._enroll_locked(code, term, dry_run)
+            return self._enroll_locked(code, term, dry_run, choices or {})
 
-    def _enroll_locked(self, code: CourseCode, term: str, dry_run: bool) -> EnrollResult:
+    def _enroll_locked(
+        self, code: CourseCode, term: str, dry_run: bool, choices: dict[str, str]
+    ) -> EnrollResult:
         result, parsed_rows = self._parse(self._page.search(SearchCriteria(course_code=code.value)))
 
         if len(result.rows) != 1:
@@ -99,9 +108,33 @@ class StudentwebSession:
         except ConfirmDialogUnrecognised as error:
             return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
 
-        return self._walk_dialog(code, state, dry_run)
+        return self._walk_dialog(code, state, dry_run, choices)
 
-    def _walk_dialog(self, code: CourseCode, state: DialogState, dry_run: bool) -> EnrollResult:
+    def preview_enrollment(self, code: CourseCode) -> list[DialogState]:
+        with self._lock:
+            row = self.search_exact(code)
+            if row is None or not row.is_takeable:
+                raise ConfirmDialogUnrecognised(nb.PREVIEW_NOT_TAKEABLE.format(code=code))
+
+            state = self._page.open_confirm_dialog(row.select_button_id or "")
+            steps = [state]
+
+            for _ in range(self._config.selectors.max_dialog_steps):
+                if self._pick(state, self._config.selectors.confirm_final_labels) is not None:
+                    return steps
+                if state.unresolved_selects:
+                    return steps
+                forward = self._pick(state, self._config.selectors.confirm_forward_labels)
+                if forward is None:
+                    return steps
+                state = self._page.advance_dialog(forward.id)
+                steps.append(state)
+
+            return steps
+
+    def _walk_dialog(
+        self, code: CourseCode, state: DialogState, dry_run: bool, choices: dict[str, str]
+    ) -> EnrollResult:
         selectors = self._config.selectors
 
         for _ in range(selectors.max_dialog_steps):
@@ -111,6 +144,11 @@ class StudentwebSession:
                     EnrollOutcome.ABORTED,
                     nb.ENROLL_DIALOG_MISMATCH.format(code=code, excerpt=_excerpt(state.html)),
                 )
+
+            resolved = self._resolve_selects(code, state, choices)
+            if isinstance(resolved, EnrollResult):
+                return resolved
+            state = resolved
 
             final = self._pick(state, selectors.confirm_final_labels)
             if final is not None:
@@ -123,13 +161,6 @@ class StudentwebSession:
                 except ConfirmDialogUnrecognised as error:
                     return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
                 return self._classify_outcome(code, self._page.read_outcome())
-
-            if state.pending_choices:
-                return EnrollResult(
-                    code,
-                    EnrollOutcome.ABORTED,
-                    nb.ENROLL_NEEDS_A_CHOICE.format(fields=", ".join(state.pending_choices)),
-                )
 
             forward = self._pick(state, selectors.confirm_forward_labels)
             if forward is None:
@@ -154,6 +185,32 @@ class StudentwebSession:
             EnrollOutcome.ABORTED,
             nb.ENROLL_TOO_MANY_STEPS.format(steps=selectors.max_dialog_steps),
         )
+
+    def _resolve_selects(
+        self, code: CourseCode, state: DialogState, choices: dict[str, str]
+    ) -> DialogState | EnrollResult:
+        for select in state.unresolved_selects:
+            option = self._option_for(select, choices)
+            if option is None:
+                return EnrollResult(
+                    code,
+                    EnrollOutcome.ABORTED,
+                    nb.ENROLL_CHOICE_NEEDED.format(
+                        field=select.label or select.id,
+                        options=", ".join(item.label for item in select.options) or "ingen",
+                    ),
+                )
+            try:
+                state = self._page.choose(select.id, option.value)
+            except ConfirmDialogUnrecognised as error:
+                return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+        return state
+
+    def _option_for(self, select: DialogSelect, choices: dict[str, str]):
+        wanted = choices.get(select.label) or choices.get(select.id)
+        if wanted:
+            return select.option_matching(wanted)
+        return select.only_option
 
     def _pick(self, state: DialogState, labels: tuple[str, ...]):
         negatives = self._config.selectors.confirm_negative_labels

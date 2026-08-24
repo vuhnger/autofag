@@ -98,6 +98,7 @@ class WatchEntry:
     last_status_text: str = ""
     last_status_change_at: datetime | None = None
     stopped_reason: str | None = None
+    dialog_choices: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_stopped(self) -> bool:

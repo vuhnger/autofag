@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import socket
 from datetime import datetime, timedelta
 
@@ -48,6 +49,7 @@ class WatchlistRepository:
             row.last_status_text = entry.last_status_text
             row.last_status_change_at = entry.last_status_change_at
             row.stopped_reason = entry.stopped_reason
+            row.dialog_choices = json.dumps(entry.dialog_choices, ensure_ascii=False)
 
     def remove(self, code: CourseCode) -> None:
         with self._session_factory() as session, session.begin():
@@ -250,6 +252,21 @@ def _to_entry(row: WatchEntryRow) -> WatchEntry:
         last_status_text=row.last_status_text,
         last_status_change_at=_as_aware(row.last_status_change_at),
         stopped_reason=row.stopped_reason,
+        dialog_choices=_decode_choices(row.dialog_choices),
+    )
+
+
+def _decode_choices(raw: str | None) -> dict[str, str]:
+    if not raw:
+        return {}
+    try:
+        decoded = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return (
+        {str(key): str(value) for key, value in decoded.items()}
+        if isinstance(decoded, dict)
+        else {}
     )
 
 

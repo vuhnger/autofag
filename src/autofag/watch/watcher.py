@@ -124,7 +124,7 @@ class Watcher:
         if row.is_takeable:
             self._dispatcher.dispatch(available_notification(row.code.value, row.name))
             if entry.auto_enroll:
-                result = self._enroller.enroll(row, self._term)
+                result = self._enroller.enroll(row, self._term, entry.dialog_choices)
                 self._logger.info(
                     "enroll %s -> %s (%s)", row.code, result.outcome.value, result.detail
                 )

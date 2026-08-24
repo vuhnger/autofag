@@ -76,13 +76,32 @@ def test_a_dialog_with_no_safe_way_forward_aborts(harness):
     assert harness.page.enrolled == []
 
 
-def test_a_dialog_that_needs_a_choice_is_left_to_the_human(harness):
+def test_a_single_option_dropdown_is_filled_in_automatically(harness):
     harness.page.advance_to_takeable("IN5170")
-    harness.page.pending_choices = ("undervisningsparti",)
+    harness.page.select_options = ("Parti 1",)
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+    assert result.outcome is EnrollOutcome.CONFIRMED
+    assert harness.page.enrolled == ["IN5170"]
+
+
+def test_a_real_choice_is_left_to_the_human_with_the_options_listed(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = ("Parti 1", "Parti 2")
     result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
     assert result.outcome is EnrollOutcome.ABORTED
     assert "undervisningsparti" in result.detail
+    assert "Parti 2" in result.detail
     assert harness.page.enrolled == []
+
+
+def test_a_recorded_preference_resolves_the_choice(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = ("Parti 1", "Parti 2")
+    result = harness.session.enroll(
+        CourseCode("IN5170"), term="2026H", choices={"undervisningsparti": "Parti 2"}
+    )
+    assert result.outcome is EnrollOutcome.CONFIRMED
+    assert harness.page.enrolled == ["IN5170"]
 
 
 def test_a_multi_step_dialog_is_walked_to_the_end(harness):
