@@ -114,21 +114,31 @@ class InitWizard:
             if result.has_next_page:
                 self._presenter.warn(nb.SEARCH_MORE_PAGES)
 
-            picked = self._prompter.checkbox(
-                nb.SELECT_COURSES,
-                [(row.code.value, self._choice_label(row)) for row in result.rows],
-            )
-            for code in picked:
-                row = next((item for item in result.rows if item.code.value == code), None)
-                if row is not None:
-                    selected[code] = row
+            picked = self._pick(result.rows)
+            for row in picked:
+                selected[row.code.value] = row
 
             if picked:
-                self._presenter.info(nb.SELECT_ADDED.format(codes=", ".join(picked)))
-            if not self._prompter.confirm(nb.SEARCH_AGAIN, default=False):
-                if selected:
-                    return list(selected.values())
-                self._presenter.warn(nb.SELECT_NONE_YET)
+                self._presenter.info(
+                    nb.SELECT_ADDED.format(codes=", ".join(row.code.value for row in picked))
+                )
+            if selected:
+                self._presenter.info(nb.SELECT_SO_FAR.format(codes=", ".join(sorted(selected))))
+
+    def _pick(self, rows) -> list[CourseRow]:
+        if len(rows) == 1:
+            row = rows[0]
+            question = nb.SELECT_SINGLE.format(code=row.code.value, name=row.name)
+            return [row] if self._prompter.confirm(question, default=True) else []
+
+        codes = self._prompter.checkbox(
+            nb.SELECT_COURSES,
+            [(row.code.value, self._choice_label(row)) for row in rows],
+        )
+        if not codes:
+            self._presenter.warn(nb.SELECT_NOTHING_PICKED)
+        by_code = {row.code.value: row for row in rows}
+        return [by_code[code] for code in codes if code in by_code]
 
     def _search(self, query: str):
         by_code = self._session.search(SearchCriteria(course_code=query))
@@ -160,27 +170,29 @@ class InitWizard:
         )
 
     def _configure_channels(self) -> list[str]:
-        chosen = self._prompter.checkbox(
-            nb.CHANNELS_SELECT,
-            [(name, nb.CHANNEL_LABELS[name]) for name in CHANNEL_ORDER],
-        )
-        working: list[str] = []
+        while True:
+            chosen = self._prompter.checkbox(
+                nb.CHANNELS_SELECT,
+                [(name, nb.CHANNEL_LABELS[name]) for name in CHANNEL_ORDER],
+            )
+            if not chosen:
+                self._presenter.warn(nb.CHANNELS_NEED_ONE)
+                continue
 
-        for name in chosen:
-            while True:
-                self._gather_channel_config(name)
-                if self._verify_channel(name):
-                    working.append(name)
-                    break
-                if not self._prompter.confirm(
-                    nb.CHANNEL_TEST_RETRY.format(channel=name), default=True
-                ):
-                    self._disable_channel(name)
-                    break
+            working = [name for name in chosen if self._set_up_channel(name)]
+            if working:
+                return working
 
-        if not working:
-            raise WizardAborted(nb.CHANNEL_NONE_WORKING)
-        return working
+            self._presenter.warn(nb.CHANNEL_NONE_WORKING_RETRY)
+
+    def _set_up_channel(self, name: str) -> bool:
+        while True:
+            self._gather_channel_config(name)
+            if self._verify_channel(name):
+                return True
+            if not self._prompter.confirm(nb.CHANNEL_TEST_RETRY.format(channel=name), default=True):
+                self._disable_channel(name)
+                return False
 
     def _gather_channel_config(self, name: str) -> None:
         notify = self._config.notify

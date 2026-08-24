@@ -9,27 +9,33 @@ LOGIN_INSTRUCTIONS = (
 LOGIN_DONE = "Innlogget. Økten ligger i din egen lokale nettleserprofil."
 LOGIN_FAILED = "Fikk ikke logget inn: {reason}"
 
-SEARCH_PROMPT = "Søk etter emne (emnekode eller navn, tom linje for å gå videre)"
+SEARCH_PROMPT = "Søk etter emne (emnekode eller navn). Tom linje = ferdig"
 SEARCH_FILTER_SUBJECT = "Begrens til fag (valgfritt)"
 SEARCH_FILTER_FACULTY = "Begrens til fakultet (valgfritt)"
 SEARCH_NO_HITS = "Ingen treff. Prøv et annet søk."
 SEARCH_HITS = "{shown} av {total} treff"
 SEARCH_MORE_PAGES = "Det finnes flere sider med treff. Snevre inn søket for å se resten."
 
-SELECT_COURSES = "Velg emnene du vil overvåke (mellomrom for å velge, enter for å bekrefte)"
+SELECT_COURSES = "Velg emner: mellomrom merker av, enter bekrefter"
+SELECT_SINGLE = "Legg {code} {name} til i watchlisten?"
+SELECT_NOTHING_PICKED = "Du merket ikke av noe. Bruk mellomrom for å merke av."
+SELECT_SO_FAR = "Valgt så langt: {codes}. Søk videre, eller trykk enter på tomt søk."
 SELECT_NONE_YET = "Du har ikke valgt noen emner ennå."
 SELECT_ADDED = "Lagt til: {codes}"
-SEARCH_AGAIN = "Vil du søke etter flere emner?"
 
 WATCH_OPENS_AT = "Vet du når påmeldingen åpner for {code}? (ÅÅÅÅ-MM-DD TT:MM, tom for nei)"
 WATCH_BAD_TIMESTAMP = "Forsto ikke tidspunktet. Hopper over det."
 
-CHANNELS_SELECT = "Hvordan vil du varsles?"
+CHANNELS_SELECT = "Hvordan vil du varsles? Mellomrom merker av, enter bekrefter"
+CHANNELS_NEED_ONE = (
+    "Du må velge minst én kanal. Uten varsling får du aldri vite at en plass ble ledig.\n"
+    "Bruk mellomrom for å merke av. macOS-varsel krever ingen oppsett."
+)
 CHANNEL_LABELS = {
-    "ntfy": "ntfy.sh (push til mobil)",
-    "email": "E-post",
-    "sms": "SMS via Twilio",
-    "macos": "macOS-varsel",
+    "ntfy": "ntfy.sh, push til mobil (krever et topic)",
+    "email": "E-post (krever SMTP-vert og passord)",
+    "sms": "SMS via Twilio (krever konto og nøkler)",
+    "macos": "macOS-varsel (ingen oppsett)",
 }
 CHANNEL_NTFY_TOPIC = "ntfy-topic (hold den hemmelig, den er nøkkelen til varslene dine)"
 CHANNEL_NTFY_SERVER = "ntfy-server"
@@ -47,8 +53,8 @@ CHANNEL_TEST_SENDING = "Sender en testvarsling på {channel} ..."
 CHANNEL_TEST_CONFIRM = "Kom testvarslingen fram på {channel}?"
 CHANNEL_TEST_FAILED = "{channel} svarte: {detail}"
 CHANNEL_TEST_RETRY = "Vil du prøve å sette opp {channel} på nytt?"
-CHANNEL_NONE_WORKING = (
-    "Ingen kanaler virker. Da finner du aldri ut at en plass ble ledig, så autofag stopper her."
+CHANNEL_NONE_WORKING_RETRY = (
+    "Ingen av kanalene virket. Vi tar det på nytt, så du ikke ender opp uten varsling."
 )
 
 TEST_NOTIFICATION_TITLE = "autofag virker"

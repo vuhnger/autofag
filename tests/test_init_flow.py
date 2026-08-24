@@ -12,8 +12,8 @@ from autofag.storage.secrets import InMemorySecretStore
 from tests.conftest import build_harness
 
 
-def build_wizard(harness, answers, dry_run=False):
-    channel = RecordingChannel("macos")
+def build_wizard(harness, answers, dry_run=False, channel=None):
+    channel = channel or RecordingChannel("macos")
     presenter = RecordingPresenter()
 
     def dispatcher_factory(names):
@@ -42,7 +42,7 @@ def build_wizard(harness, answers, dry_run=False):
 
 def test_wizard_searches_studentweb_and_persists_the_selection(config):
     harness = build_harness(config)
-    answers = ["IN5170", ["IN5170"], False, "", ["macos"], True, True]
+    answers = ["IN5170", True, "", "", ["macos"], True, True]
     wizard, channel, presenter = build_wizard(harness, answers)
 
     outcome = wizard.run()
@@ -55,7 +55,7 @@ def test_wizard_searches_studentweb_and_persists_the_selection(config):
 
 def test_wizard_finds_courses_by_name_across_faculties(config):
     harness = build_harness(config)
-    answers = ["samers", ["HIS2010"], False, "", ["macos"], True, True]
+    answers = ["samers", True, "", "", ["macos"], True, True]
     wizard, _, presenter = build_wizard(harness, answers)
 
     outcome = wizard.run()
@@ -66,7 +66,7 @@ def test_wizard_finds_courses_by_name_across_faculties(config):
 def test_wizard_marks_a_takeable_course_in_the_table(config):
     harness = build_harness(config)
     harness.page.advance_to_takeable("IN5170")
-    answers = ["IN5170", ["IN5170"], False, "", ["macos"], True, True]
+    answers = ["IN5170", True, "", "", ["macos"], True, True]
     wizard, _, presenter = build_wizard(harness, answers)
 
     wizard.run()
@@ -77,9 +77,44 @@ def test_wizard_marks_a_takeable_course_in_the_table(config):
 
 def test_dry_run_turns_auto_enroll_off_for_every_entry(config):
     harness = build_harness(config)
-    answers = ["IN5170", ["IN5170"], False, "", ["macos"], True, True]
+    answers = ["IN5170", True, "", "", ["macos"], True, True]
     wizard, _, _ = build_wizard(harness, answers, dry_run=True)
 
     outcome = wizard.run()
 
     assert all(entry.auto_enroll is False for entry in outcome.entries)
+
+
+def test_choosing_no_channel_re_asks_instead_of_dead_ending(config):
+    harness = build_harness(config)
+    answers = ["IN5170", True, "", "", [], ["macos"], True, True]
+    wizard, _, presenter = build_wizard(harness, answers)
+
+    outcome = wizard.run()
+
+    assert outcome.channels == ["macos"]
+    assert any("minst én kanal" in message for message in presenter.messages)
+
+
+class FlakyChannel(RecordingChannel):
+    def __init__(self, failures: int) -> None:
+        super().__init__("macos")
+        self._failures = failures
+
+    def send(self, notification):
+        result = super().send(notification)
+        if self._failures > 0:
+            self._failures -= 1
+            return type(result)(self.name, False, "kanalen svarte ikke")
+        return result
+
+
+def test_a_failing_channel_leads_back_to_the_channel_choice(config):
+    harness = build_harness(config)
+    answers = ["IN5170", True, "", "", ["macos"], False, ["macos"], True, True]
+    wizard, _, presenter = build_wizard(harness, answers, channel=FlakyChannel(failures=1))
+
+    outcome = wizard.run()
+
+    assert outcome.channels == ["macos"]
+    assert any("på nytt" in message for message in presenter.messages)
