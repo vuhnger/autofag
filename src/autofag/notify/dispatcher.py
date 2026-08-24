@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, wait
+from dataclasses import replace
 from datetime import datetime
 from logging import Logger
 
@@ -43,13 +44,21 @@ class NotificationDispatcher:
             self._logger.error("no notification channels configured: %s", notification.title)
             return []
 
-        results = self._fan_out(notification)
+        results = self._fan_out(self._decorate(notification))
         self._delivery_log.record(notification, results)
 
         if not any(result.delivered for result in results):
-            results.extend(self._escalate(notification))
+            results.extend(self._escalate(self._decorate(notification)))
 
         return results
+
+    def _decorate(self, notification: Notification) -> Notification:
+        if not self._config.use_emoji:
+            return notification
+        emoji = self._config.emoji.get(notification.kind.value)
+        if not emoji or notification.title.startswith(emoji):
+            return notification
+        return replace(notification, title=f"{emoji} {notification.title}")
 
     def _should_skip(self, notification: Notification) -> bool:
         if notification.kind.value in self._config.always_deliver_kinds:

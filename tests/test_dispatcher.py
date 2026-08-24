@@ -126,3 +126,36 @@ def test_total_blackout_escalates_to_the_fallback():
     dispatcher.dispatch(notification(NotificationKind.AVAILABLE))
 
     assert len(fallback.sent) == 1
+
+
+def test_notifications_carry_an_emoji_so_every_channel_shows_one():
+    channel = RecordingChannel()
+    dispatcher = build([channel])
+
+    dispatcher.dispatch(available("IN5170"))
+
+    assert channel.sent[0].title.startswith("🚨 ")
+    assert "IN5170" in channel.sent[0].title
+
+
+def test_the_emoji_can_be_turned_off():
+    channel = RecordingChannel()
+    config = AppConfig().notify
+    config.use_emoji = False
+    dispatcher = build([channel], notify_config=config)
+
+    dispatcher.dispatch(available("IN5170"))
+
+    assert channel.sent[0].title.startswith("Ledig plass")
+
+
+def test_the_emoji_never_changes_how_notifications_are_deduped():
+    channel = RecordingChannel()
+    clock = FakeClock()
+    dispatcher = build([channel], clock=clock)
+
+    dispatcher.dispatch(available("IN5170"))
+    clock.advance(600)
+    dispatcher.dispatch(available("IN5170"))
+
+    assert len(channel.sent) == 1

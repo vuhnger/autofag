@@ -41,4 +41,5 @@ tapt innlogging og oppbrukt timesbudsjett kommer alltid gjennom, uansett tak.
 ```yaml
 notify:
   max_per_course_per_run: 1   # 0 slår av taket
+  use_emoji: true             # emojien står i tittelen, så alle kanaler viser den
 ```
