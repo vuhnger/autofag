@@ -9,6 +9,7 @@ from autofag import __version__
 from autofag import strings_nb as nb
 from autofag.app import Services, build_services
 from autofag.config import load_config
+from autofag.errors import guarded
 from autofag.init_flow import InitWizard, WizardAborted
 from autofag.models import SearchCriteria
 from autofag.presentation import RichPresenter
@@ -29,6 +30,7 @@ VerboseOption = Annotated[bool, typer.Option("--verbose", help="Mer logging")]
 
 
 @app.command()
+@guarded
 def init(
     config_path: ConfigOption = None,
     dry_run: DryRunOption = False,
@@ -37,9 +39,10 @@ def init(
     services = build_services(load_config(config_path), verbose)
     _authenticate(services)
 
+    prompter = QuestionaryPrompter()
     wizard = InitWizard(
         session=services.session,
-        prompter=QuestionaryPrompter(),
+        prompter=prompter,
         presenter=services.presenter,
         watchlist=services.watchlist,
         secrets=services.secrets,
@@ -55,12 +58,15 @@ def init(
     except (WizardAborted, PromptAborted) as error:
         services.presenter.warn(str(error))
         raise typer.Exit(code=1) from error
+    finally:
+        prompter.close()
 
     if outcome.started:
         _run_watcher(services, dry_run)
 
 
 @app.command()
+@guarded
 def watch(
     config_path: ConfigOption = None,
     dry_run: DryRunOption = False,
@@ -75,6 +81,7 @@ def watch(
 
 
 @app.command()
+@guarded
 def status(config_path: ConfigOption = None) -> None:
     services = build_services(load_config(config_path))
     entries = services.watchlist.all_entries()
@@ -99,6 +106,7 @@ def status(config_path: ConfigOption = None) -> None:
 
 
 @app.command()
+@guarded
 def doctor(
     config_path: ConfigOption = None,
     course: Annotated[str, typer.Option(help="Emnekode å teste mot")] = "IN5",
@@ -125,6 +133,7 @@ def doctor(
 
 
 @app.command()
+@guarded
 def logout(config_path: ConfigOption = None) -> None:
     config = load_config(config_path)
     _remove_directory(config.browser_profile_dir())
@@ -143,6 +152,7 @@ def _remove_directory(path: Path) -> None:
 
 
 @app.command()
+@guarded
 def version() -> None:
     typer.echo(__version__)
 
@@ -201,8 +211,20 @@ def _run_watcher(services: Services, dry_run: bool) -> None:
         services.presenter.warn(str(error))
         raise typer.Exit(code=1) from error
     except KeyboardInterrupt:
-        services.presenter.info("Stoppet.")
+        services.presenter.info(nb.INTERRUPTED)
+    except (PageUnavailable, TransportError) as error:
+        services.presenter.warn(nb.WATCH_CRASHED.format(reason=error))
+        raise typer.Exit(code=1) from error
+    finally:
+        _close_quietly(services)
 
 
 if __name__ == "__main__":
     app()
+
+
+def _close_quietly(services: Services) -> None:
+    try:
+        services.page.close()
+    except Exception:  # noqa: BLE001
+        services.logger.debug("kunne ikke lukke nettleseren", exc_info=True)

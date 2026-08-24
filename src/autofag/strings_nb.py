@@ -117,3 +117,11 @@ ENROLL_NOT_TAKEABLE = "raden er ikke ledig: {status}"
 ENROLL_DIALOG_MISMATCH = "bekreftelsesdialogen nevnte ikke emnet"
 ENROLL_DRY_RUN = "tørrkjøring stoppet før bekreftelse via {control}"
 ENROLL_UNRECOGNISED_RESPONSE = "svaret etter bekreftelse ble ikke gjenkjent"
+
+UNEXPECTED_ERROR = (
+    "Noe uventet skjedde: {reason}\n"
+    "Hele feilen ligger i {log}. autofag har ikke gjort noe halvveis."
+)
+INTERRUPTED = "Stoppet."
+SEARCH_FAILED = "Søket feilet: {reason}. Prøv igjen, eller trykk Ctrl+C for å avslutte."
+WATCH_CRASHED = "Overvåkingen stoppet: {reason}"

@@ -27,7 +27,9 @@ from autofag.storage.secrets import (
     SECRET_TWILIO_AUTH_TOKEN,
     SecretStore,
 )
+from autofag.studentweb.page import PageUnavailable
 from autofag.studentweb.session import StudentwebSession
+from autofag.transport.errors import TransportError
 
 CHANNEL_ORDER = ("ntfy", "email", "sms", "macos")
 TIMESTAMP_FORMATS = ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M")
@@ -98,7 +100,12 @@ class InitWizard:
                 self._presenter.warn(nb.SELECT_NONE_YET)
                 continue
 
-            result = self._search(query)
+            try:
+                result = self._search(query)
+            except (PageUnavailable, TransportError) as error:
+                self._presenter.warn(nb.SEARCH_FAILED.format(reason=error))
+                continue
+
             if not result.rows:
                 self._presenter.warn(nb.SEARCH_NO_HITS)
                 continue
