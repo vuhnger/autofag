@@ -213,6 +213,18 @@ class NotifyConfig(BaseModel):
     channel_timeout_seconds: float = 15.0
     dedupe_window_seconds: float = 300.0
     max_per_course_per_run: int = 1
+    use_emoji: bool = True
+    emoji: dict[str, str] = Field(
+        default_factory=lambda: {
+            "available": "🚨",
+            "enroll_outcome": "✅",
+            "needs_manual_check": "⚠️",
+            "session_expired": "🔐",
+            "budget_exhausted": "⏳",
+            "status_vocabulary_miss": "❓",
+            "test": "🔔",
+        }
+    )
     always_deliver_kinds: tuple[str, ...] = (
         "test",
         "enroll_outcome",
