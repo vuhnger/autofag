@@ -17,7 +17,8 @@ from autofag.models import (
 )
 from autofag.notify.dispatcher import NotificationDispatcher, available_notification
 from autofag.storage.repos import RunLock, WatchlistRepository
-from autofag.studentweb.session import AuthenticationLost, StudentwebSession
+from autofag.studentweb.page import NotAuthenticated
+from autofag.studentweb.session import StudentwebSession
 from autofag.transport.errors import BudgetExhausted, TransportError
 from autofag.watch.enroller import AutoEnroller
 from autofag.watch.tempo import TempoDecision, decide
@@ -82,7 +83,7 @@ class Watcher:
 
             try:
                 self._check(course)
-            except AuthenticationLost:
+            except NotAuthenticated:
                 self._notify_session_expired()
                 if not self._wait_for_new_login():
                     return
@@ -173,7 +174,7 @@ class Watcher:
             )
             try:
                 self._session.keepalive()
-            except AuthenticationLost:
+            except NotAuthenticated:
                 self._logger.info("still logged out (probe %s)", attempt + 1)
                 continue
             except TransportError as error:

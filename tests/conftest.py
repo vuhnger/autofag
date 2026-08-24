@@ -6,22 +6,20 @@ from random import Random
 
 import pytest
 
-from autofag.auth.cookies import StaticCookies
 from autofag.clock import FakeClock
 from autofag.config import AppConfig
 from autofag.storage.db import create_memory_database
 from autofag.storage.repos import BudgetStore
-from autofag.studentweb.components import ComponentMapScraper
+from autofag.studentweb.fake_page import FakeStudentwebPage, default_courses
 from autofag.studentweb.session import StudentwebSession
 from autofag.studentweb.status import StatusClassifier
-from autofag.transport.fake import FakeStudentwebServer, default_courses
-from autofag.transport.gate import StudentwebGate
+from autofag.transport.pace import PacedStudentwebPage
 from autofag.transport.retry import RetryPolicy
 
 
 @dataclass(slots=True)
 class Harness:
-    server: FakeStudentwebServer
+    page: FakeStudentwebPage
     session: StudentwebSession
     clock: FakeClock
     config: AppConfig
@@ -42,31 +40,28 @@ def harness(config: AppConfig) -> Harness:
     return build_harness(config)
 
 
-def build_harness(config: AppConfig, **server_kwargs) -> Harness:
+def build_harness(config: AppConfig, **page_kwargs) -> Harness:
     clock = FakeClock()
     _, session_factory = create_memory_database()
-    server = FakeStudentwebServer(clock=clock, courses=default_courses(), **server_kwargs)
-    gate = StudentwebGate(
-        transport=server,
+    page = FakeStudentwebPage(courses=default_courses(), **page_kwargs)
+    paced = PacedStudentwebPage(
+        page=page,
         budget_store=BudgetStore(session_factory, clock),
         retry=RetryPolicy(config.retry, Random(0)),
         clock=clock,
         logger=logging.getLogger("test"),
-        config=config.studentweb,
         budget_config=config.budget,
         random=Random(0),
     )
     session = StudentwebSession(
-        gate=gate,
-        scraper=ComponentMapScraper(config.selectors),
+        page=paced,
         classifier=StatusClassifier(config.status_vocabulary),
-        cookies=StaticCookies({"JSESSIONID": "test"}),
         clock=clock,
         logger=logging.getLogger("test"),
         config=config,
     )
     return Harness(
-        server=server,
+        page=page,
         session=session,
         clock=clock,
         config=config,

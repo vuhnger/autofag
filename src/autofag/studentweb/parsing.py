@@ -8,7 +8,6 @@ from lxml import etree
 
 from autofag.config import SelectorConfig
 from autofag.models import CourseCode, CourseRow, InvalidCourseCode, RowStatus, SearchResult
-from autofag.studentweb.components import AjaxBinding, parse_ajax_binding
 from autofag.studentweb.status import Classification, StatusClassifier
 
 HIT_COUNT_PATTERN = re.compile(r"\((\d+)\s")
@@ -89,7 +88,6 @@ class ParsedRow:
     row: CourseRow
     classification: Classification
     row_index: int | None
-    select_binding: AjaxBinding | None = None
 
 
 def parse_search_results(
@@ -141,7 +139,7 @@ def _parse_row(
 
     teaching_text = _teaching_section_text(cells[2], selectors)
     classification = classifier.classify(teaching_text)
-    button_id, row_index, select_binding = _select_button(row_element, selectors)
+    button_id, row_index = _select_button(row_element, selectors)
 
     row = CourseRow(
         code=code,
@@ -151,12 +149,7 @@ def _parse_row(
         status_text=teaching_text,
         select_button_id=button_id,
     )
-    return ParsedRow(
-        row=row,
-        classification=classification,
-        row_index=row_index,
-        select_binding=select_binding,
-    )
+    return ParsedRow(row=row, classification=classification, row_index=row_index)
 
 
 def _teaching_section_text(cell: Tag, selectors: SelectorConfig) -> str:
@@ -211,23 +204,19 @@ def _is_inside_detail_toggle(node: Tag, selectors: SelectorConfig) -> bool:
     return selectors.detail_toggle_class in (node.get("class") or [])
 
 
-def _select_button(
-    row_element: Tag, selectors: SelectorConfig
-) -> tuple[str | None, int | None, AjaxBinding | None]:
+def _select_button(row_element: Tag, selectors: SelectorConfig) -> tuple[str | None, int | None]:
     button = row_element.find(
         lambda tag: bool(tag.get("id")) and selectors.select_button_marker in tag.get("id", "")
     )
     if not isinstance(button, Tag):
-        return None, None, None
+        return None, None
 
     button_id = button.get("id")
     if not isinstance(button_id, str):
-        return None, None, None
+        return None, None
 
-    onclick = button.get("onclick")
-    binding = parse_ajax_binding(onclick) if isinstance(onclick, str) else None
     match = ROW_INDEX_PATTERN.search(button_id)
-    return button_id, int(match.group(1)) if match else None, binding
+    return button_id, int(match.group(1)) if match else None
 
 
 def _cell_text(cell: Tag, selectors: SelectorConfig) -> str:

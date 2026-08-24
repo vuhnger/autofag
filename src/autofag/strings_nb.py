@@ -100,3 +100,20 @@ ENROLL_NO_ATTEMPT = "ingen forsøk ble gjort"
 ENROLL_VERIFIED_AFTER_DROP = "verifisert etter avbrutt forsøk"
 ENROLL_COULD_NOT_VERIFY = "{detail}; kunne ikke verifisere: {error}"
 ENROLL_COURSE_MISSING = "{detail}; emnet ble ikke funnet"
+
+BROWSER_PROFILE_IN_USE = (
+    "Nettleserprofilen er i bruk av en annen autofag-prosess (pid {pid}).\n"
+    "Lukk det vinduet, eller avslutt prosessen, og prøv igjen."
+)
+BROWSER_PROFILE_IN_USE_UNKNOWN = (
+    "Nettleserprofilen er allerede i bruk av et annet Chromium-vindu.\n"
+    "Lukk vinduet autofag åpnet tidligere, og prøv igjen."
+)
+BROWSER_FAILED = "Nettleseren startet ikke: {reason}"
+
+ENROLL_NOT_ONE_ROW = "forventet nøyaktig én rad, fikk {count}"
+ENROLL_WRONG_ROW = "raden var {found}, forventet {wanted}"
+ENROLL_NOT_TAKEABLE = "raden er ikke ledig: {status}"
+ENROLL_DIALOG_MISMATCH = "bekreftelsesdialogen nevnte ikke emnet"
+ENROLL_DRY_RUN = "tørrkjøring stoppet før bekreftelse via {control}"
+ENROLL_UNRECOGNISED_RESPONSE = "svaret etter bekreftelse ble ikke gjenkjent"

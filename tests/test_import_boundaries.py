@@ -8,8 +8,8 @@ import pytest
 PACKAGE_ROOT = Path(__file__).resolve().parents[1] / "src" / "autofag"
 
 RESTRICTED_MODULES = {
-    "httpx": {"transport/gate.py", "notify/http.py"},
-    "playwright": {"auth/login.py"},
+    "httpx": {"notify/http.py"},
+    "playwright": {"auth/browser.py"},
     "keyring": {"storage/secrets.py"},
     "subprocess": {"notify/channels.py"},
     "smtplib": {"notify/channels.py"},
@@ -45,8 +45,13 @@ def test_restricted_module_is_only_imported_where_it_belongs(restricted, allowed
     )
 
 
-def test_notification_client_and_studentweb_gate_stay_separate():
-    gate = (PACKAGE_ROOT / "transport" / "gate.py").read_text(encoding="utf-8")
+def test_every_studentweb_action_goes_through_the_paced_page():
+    paced = (PACKAGE_ROOT / "transport" / "pace.py").read_text(encoding="utf-8")
+    app = (PACKAGE_ROOT / "app.py").read_text(encoding="utf-8")
+    assert "_budget_store.consume" in paced
+    assert "PacedStudentwebPage(" in app
+
+
+def test_the_notification_client_can_never_reach_studentweb():
     outbound = (PACKAGE_ROOT / "notify" / "http.py").read_text(encoding="utf-8")
-    assert "_reject_foreign_target" in gate
     assert "_reject_studentweb" in outbound

@@ -3,11 +3,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from logging import Logger
-from pathlib import Path
 from random import Random
 
-from autofag.auth.cookies import BrowserProfileCookies, CookieProvider, StaticCookies
-from autofag.auth.login import STORAGE_STATE_FILENAME, BrowserLogin
 from autofag.clock import Clock, SystemClock
 from autofag.config import AppConfig
 from autofag.logging_setup import configure_logging
@@ -22,7 +19,7 @@ from autofag.notify.channels import (
 from autofag.notify.dispatcher import NotificationDispatcher
 from autofag.notify.http import OutboundHttpClient
 from autofag.notify.protocol import NotificationChannel
-from autofag.presentation import RichPresenter
+from autofag.presentation import Presenter, RichPresenter
 from autofag.storage.db import create_database
 from autofag.storage.repos import (
     BudgetStore,
@@ -32,13 +29,11 @@ from autofag.storage.repos import (
     WatchlistRepository,
 )
 from autofag.storage.secrets import KeyringSecretStore, SecretStore
-from autofag.studentweb.components import ComponentMapScraper
+from autofag.studentweb.page import StudentwebPage
 from autofag.studentweb.session import StudentwebSession
 from autofag.studentweb.status import StatusClassifier
-from autofag.transport.gate import HttpTransport, HttpxTransport, StudentwebGate
+from autofag.transport.pace import PacedStudentwebPage
 from autofag.transport.retry import RetryPolicy
-
-COOKIE_DOMAIN = "studentweb"
 
 
 @dataclass(slots=True)
@@ -47,20 +42,18 @@ class Services:
     clock: Clock
     logger: Logger
     secrets: SecretStore
+    page: StudentwebPage
     session: StudentwebSession
     watchlist: WatchlistRepository
     ledger: EnrollmentLedger
     delivery_log: DeliveryLog
     run_lock: RunLock
-    login: BrowserLogin
-    presenter: RichPresenter
-    cookies: CookieProvider
+    presenter: Presenter
     run_id: str
 
     def dispatcher(self, channel_names: list[str] | None = None) -> NotificationDispatcher:
-        channels = build_channels(self.config, self.secrets, channel_names)
         return NotificationDispatcher(
-            channels=channels,
+            channels=build_channels(self.config, self.secrets, channel_names),
             delivery_log=self.delivery_log,
             config=self.config.notify,
             clock=self.clock,
@@ -76,22 +69,18 @@ def build_services(config: AppConfig, verbose: bool = False) -> Services:
     presenter = RichPresenter()
 
     _, session_factory = create_database(config.storage)
-    cookies = _build_cookies(config)
-    gate = StudentwebGate(
-        transport=_build_transport(config, clock),
+    page = PacedStudentwebPage(
+        page=_build_page(config, logger, presenter),
         budget_store=BudgetStore(session_factory, clock),
         retry=RetryPolicy(config.retry, Random()),
         clock=clock,
         logger=logger,
-        config=config.studentweb,
         budget_config=config.budget,
         random=Random(),
     )
     session = StudentwebSession(
-        gate=gate,
-        scraper=ComponentMapScraper(config.selectors),
+        page=page,
         classifier=StatusClassifier(config.status_vocabulary),
-        cookies=cookies,
         clock=clock,
         logger=logger,
         config=config,
@@ -102,34 +91,26 @@ def build_services(config: AppConfig, verbose: bool = False) -> Services:
         clock=clock,
         logger=logger,
         secrets=secrets,
+        page=page,
         session=session,
         watchlist=WatchlistRepository(session_factory, clock),
         ledger=EnrollmentLedger(session_factory, clock),
         delivery_log=DeliveryLog(session_factory, clock),
         run_lock=RunLock(session_factory, clock),
-        login=BrowserLogin(config, clock, logger, presenter),
         presenter=presenter,
-        cookies=cookies,
         run_id=uuid.uuid4().hex,
     )
 
 
-def _build_cookies(config: AppConfig) -> CookieProvider:
+def _build_page(config: AppConfig, logger: Logger, presenter: Presenter) -> StudentwebPage:
     if config.studentweb.transport == "fake":
-        return StaticCookies({"JSESSIONID": "fake"})
-    return BrowserProfileCookies(
-        storage_state_path=config.browser_profile_dir() / STORAGE_STATE_FILENAME,
-        cookie_domain=COOKIE_DOMAIN,
-    )
+        from autofag.studentweb.fake_page import FakeStudentwebPage, default_courses
 
+        return FakeStudentwebPage(courses=default_courses())
 
-def _build_transport(config: AppConfig, clock: Clock) -> HttpTransport:
-    if config.studentweb.transport == "real":
-        return HttpxTransport(config.studentweb)
+    from autofag.auth.browser import PlaywrightStudentwebPage
 
-    from autofag.transport.fake import FakeStudentwebServer, default_courses
-
-    return FakeStudentwebServer(clock=clock, courses=default_courses())
+    return PlaywrightStudentwebPage(config, logger, presenter)
 
 
 def build_channels(
@@ -156,7 +137,3 @@ def _macos_fallback(config: AppConfig) -> NotificationChannel | None:
     if config.notify.macos.enabled:
         return None
     return MacOsNotificationChannel(SubprocessRunner(), config.notify.macos)
-
-
-def storage_state_path(config: AppConfig) -> Path:
-    return config.browser_profile_dir() / STORAGE_STATE_FILENAME

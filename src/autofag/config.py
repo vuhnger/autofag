@@ -25,7 +25,7 @@ def default_data_dir() -> Path:
 class StudentwebConfig(BaseModel):
     base_url: str = "https://studentweb.uio.no/studentweb/"
     courses_path: str = "aktiveemner.jsf"
-    transport: Literal["real", "fake"] = "real"
+    transport: Literal["browser", "fake"] = "browser"
     fixtures_dir: Path | None = None
     request_timeout_seconds: float = 20.0
     connect_timeout_seconds: float = 10.0

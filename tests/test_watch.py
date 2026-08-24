@@ -58,7 +58,7 @@ def build_watcher(harness, codes, auto_enroll=True, dry_run=False):
 
 def test_available_is_notified_before_the_enroll_outcome(config):
     harness = build_harness(config)
-    harness.server.advance_to_takeable("IN5170")
+    harness.page.advance_to_takeable("IN5170")
     watcher, channel, _ = build_watcher(harness, ["IN5170"])
 
     watcher.run(max_cycles=1)
@@ -67,7 +67,7 @@ def test_available_is_notified_before_the_enroll_outcome(config):
     assert kinds[0] is NotificationKind.AVAILABLE
     assert NotificationKind.ENROLL_OUTCOME in kinds
     assert kinds.index(NotificationKind.AVAILABLE) < kinds.index(NotificationKind.ENROLL_OUTCOME)
-    assert harness.server.enrolled == ["IN5170"]
+    assert harness.page.enrolled == ["IN5170"]
 
 
 def test_a_course_that_is_not_takeable_is_never_enrolled(config):
@@ -76,19 +76,19 @@ def test_a_course_that_is_not_takeable_is_never_enrolled(config):
 
     watcher.run(max_cycles=2)
 
-    assert harness.server.enrolled == []
+    assert harness.page.enrolled == []
     assert [n.kind for n in channel.sent] == []
 
 
 def test_dry_run_notifies_but_never_confirms(config):
     harness = build_harness(config)
-    harness.server.advance_to_takeable("IN5170")
+    harness.page.advance_to_takeable("IN5170")
     watcher, channel, _ = build_watcher(harness, ["IN5170"], dry_run=True)
 
     watcher.run(max_cycles=1)
 
     assert NotificationKind.AVAILABLE in [n.kind for n in channel.sent]
-    assert harness.server.enrolled == []
+    assert harness.page.enrolled == []
 
 
 def test_watch_stops_when_the_student_lacks_study_rights(config):
@@ -104,7 +104,7 @@ def test_watch_stops_when_the_student_lacks_study_rights(config):
 
 def test_lost_session_notifies_and_does_not_pretend_to_watch(config):
     harness = build_harness(config)
-    harness.server.logged_in = False
+    harness.page.logged_in = False
     config.session.max_reprobe_attempts = 1
     watcher, channel, _ = build_watcher(harness, ["IN5170"])
 

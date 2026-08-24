@@ -65,7 +65,7 @@ def test_wizard_finds_courses_by_name_across_faculties(config):
 
 def test_wizard_marks_a_takeable_course_in_the_table(config):
     harness = build_harness(config)
-    harness.server.advance_to_takeable("IN5170")
+    harness.page.advance_to_takeable("IN5170")
     answers = ["IN5170", ["IN5170"], False, "", ["macos"], True, True]
     wizard, _, presenter = build_wizard(harness, answers)
 

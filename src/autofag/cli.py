@@ -8,14 +8,13 @@ import typer
 from autofag import __version__
 from autofag import strings_nb as nb
 from autofag.app import Services, build_services
-from autofag.auth.cookies import NoSessionCookie
-from autofag.auth.login import LoginFailed
 from autofag.config import load_config
 from autofag.init_flow import InitWizard, WizardAborted
 from autofag.models import SearchCriteria
+from autofag.presentation import RichPresenter
 from autofag.prompts import PromptAborted, QuestionaryPrompter
 from autofag.storage.repos import RunAlreadyActive
-from autofag.studentweb.session import AuthenticationLost
+from autofag.studentweb.page import NotAuthenticated, PageUnavailable
 from autofag.transport.errors import TransportError
 from autofag.watch.enroller import AutoEnroller
 from autofag.watch.watcher import Watcher
@@ -108,8 +107,9 @@ def doctor(
     _authenticate(services)
 
     try:
+        filters = services.session.filters()
         result = services.session.search(SearchCriteria(course_code=course))
-    except (AuthenticationLost, TransportError) as error:
+    except (PageUnavailable, TransportError) as error:
         services.presenter.warn(str(error))
         raise typer.Exit(code=2) from error
 
@@ -118,9 +118,7 @@ def doctor(
         services.presenter.warn(nb.DOCTOR_NO_ROWS)
         raise typer.Exit(code=2)
 
-    services.presenter.info(
-        nb.DOCTOR_OK.format(release=services.session.release, rows=len(recognised))
-    )
+    services.presenter.info(nb.DOCTOR_OK.format(release=filters.release, rows=len(recognised)))
     services.presenter.info(
         nb.DOCTOR_CHANNELS.format(channels=", ".join(services.dispatcher().channel_names) or "-")
     )
@@ -128,9 +126,20 @@ def doctor(
 
 @app.command()
 def logout(config_path: ConfigOption = None) -> None:
-    services = build_services(load_config(config_path))
-    services.login.forget()
-    services.presenter.info(nb.LOGOUT_DONE)
+    config = load_config(config_path)
+    _remove_directory(config.browser_profile_dir())
+    RichPresenter().info(nb.LOGOUT_DONE)
+
+
+def _remove_directory(path: Path) -> None:
+    if not path.exists():
+        return
+    for child in sorted(path.rglob("*"), reverse=True):
+        if child.is_file() or child.is_symlink():
+            child.unlink(missing_ok=True)
+        else:
+            child.rmdir()
+    path.rmdir()
 
 
 @app.command()
@@ -143,17 +152,19 @@ def _authenticate(services: Services) -> None:
         return
 
     try:
-        services.cookies.refresh()
         services.session.keepalive()
+        services.presenter.info(nb.LOGIN_DONE)
         return
-    except (NoSessionCookie, AuthenticationLost, TransportError):
-        services.logger.info("no usable session, opening the browser")
+    except NotAuthenticated:
+        services.logger.info("ingen brukbar økt, åpner nettleseren")
+    except PageUnavailable as error:
+        services.presenter.warn(str(error))
+        raise typer.Exit(code=2) from error
 
     try:
-        services.login.log_in(nb.LOGIN_INSTRUCTIONS)
-        services.cookies.refresh()
+        services.page.log_in(nb.LOGIN_INSTRUCTIONS)
         services.session.keepalive()
-    except (LoginFailed, NoSessionCookie, AuthenticationLost) as error:
+    except PageUnavailable as error:
         services.presenter.warn(nb.LOGIN_FAILED.format(reason=error))
         raise typer.Exit(code=2) from error
 
