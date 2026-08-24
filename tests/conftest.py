@@ -45,9 +45,7 @@ def harness(config: AppConfig) -> Harness:
 def build_harness(config: AppConfig, **server_kwargs) -> Harness:
     clock = FakeClock()
     _, session_factory = create_memory_database()
-    server = FakeStudentwebServer(
-        clock=clock, courses=default_courses(), **server_kwargs
-    )
+    server = FakeStudentwebServer(clock=clock, courses=default_courses(), **server_kwargs)
     gate = StudentwebGate(
         transport=server,
         budget_store=BudgetStore(session_factory, clock),

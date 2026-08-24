@@ -21,9 +21,7 @@ NTFY_PRIORITY = {Severity.INFO: "3", Severity.IMPORTANT: "4", Severity.CRITICAL:
 
 
 class NtfyChannel:
-    def __init__(
-        self, http: OutboundHttpClient, config: NtfyConfig, secrets: SecretStore
-    ) -> None:
+    def __init__(self, http: OutboundHttpClient, config: NtfyConfig, secrets: SecretStore) -> None:
         self._http = http
         self._config = config
         self._secrets = secrets
@@ -119,9 +117,7 @@ class SmtpEmailChannel:
 
 
 class TwilioSmsChannel:
-    def __init__(
-        self, http: OutboundHttpClient, config: SmsConfig, secrets: SecretStore
-    ) -> None:
+    def __init__(self, http: OutboundHttpClient, config: SmsConfig, secrets: SecretStore) -> None:
         self._http = http
         self._config = config
         self._secrets = secrets
@@ -138,7 +134,8 @@ class TwilioSmsChannel:
         if not self._config.to_numbers or not self._config.from_number:
             return DeliveryResult(self.name, False, "sms numbers are not configured")
 
-        url = f"{self._config.api_base_url.rstrip('/')}/2010-04-01/Accounts/{account_sid}/Messages.json"
+        base = self._config.api_base_url.rstrip("/")
+        url = f"{base}/2010-04-01/Accounts/{account_sid}/Messages.json"
         text = f"{notification.title}\n{notification.body}"[:1500]
         failures = []
 

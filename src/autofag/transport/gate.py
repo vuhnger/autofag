@@ -126,9 +126,7 @@ class StudentwebGate:
             return self._send_with_retries(request)
 
     def budget_remaining(self) -> int:
-        return max(
-            0, self._budget_config.requests_per_hour - self._budget_store.used_this_hour()
-        )
+        return max(0, self._budget_config.requests_per_hour - self._budget_store.used_this_hour())
 
     def _reject_foreign_target(self, url: str) -> None:
         if not url.startswith(self._config.base_url):

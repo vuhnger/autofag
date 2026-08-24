@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from logging import Logger
 
+from autofag import strings_nb as nb
 from autofag.clock import Clock
 from autofag.config import NotifyConfig
 from autofag.models import DeliveryResult, Notification, NotificationKind, Severity
@@ -74,9 +76,7 @@ class NotificationDispatcher:
                     results.append(DeliveryResult(channel.name, False, repr(error)))
         return results
 
-    def _send_one(
-        self, channel: NotificationChannel, notification: Notification
-    ) -> DeliveryResult:
+    def _send_one(self, channel: NotificationChannel, notification: Notification) -> DeliveryResult:
         try:
             return channel.send(notification)
         except Exception as error:
@@ -85,7 +85,9 @@ class NotificationDispatcher:
 
     def _escalate(self, notification: Notification) -> list[DeliveryResult]:
         self._logger.error(
-            "every notification channel failed for %s: %s", notification.kind.value, notification.title
+            "every notification channel failed for %s: %s",
+            notification.kind.value,
+            notification.title,
         )
         if self._fallback is None:
             return []
@@ -98,8 +100,8 @@ def available_notification(course_code: str, course_name: str) -> Notification:
     return Notification(
         kind=NotificationKind.AVAILABLE,
         severity=Severity.CRITICAL,
-        title=f"Ledig plass: {course_code}",
-        body=f"{course_code} {course_name} har ledig plass på undervisningen nå.",
+        title=nb.NOTIFY_AVAILABLE_TITLE.format(code=course_code),
+        body=nb.NOTIFY_AVAILABLE_BODY.format(code=course_code, name=course_name),
         course_code=CourseCode(course_code),
         tags=("rotating_light",),
     )

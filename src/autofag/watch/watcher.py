@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from logging import Logger
 
+from autofag import strings_nb as nb
 from autofag.clock import Clock
 from autofag.config import AppConfig
 from autofag.models import (
@@ -187,8 +188,8 @@ class Watcher:
             Notification(
                 kind=NotificationKind.SESSION_EXPIRED,
                 severity=Severity.CRITICAL,
-                title="autofag mistet innloggingen",
-                body="Kjør `autofag init` for å logge inn igjen. Overvåkingen står stille inntil da.",
+                title=nb.NOTIFY_SESSION_EXPIRED_TITLE,
+                body=nb.NOTIFY_SESSION_EXPIRED_BODY,
             )
         )
 
@@ -197,8 +198,8 @@ class Watcher:
             Notification(
                 kind=NotificationKind.BUDGET_EXHAUSTED,
                 severity=Severity.CRITICAL,
-                title="autofag har brukt opp timesbudsjettet",
-                body=f"{detail}. Overvåkingen er satt på pause.",
+                title=nb.NOTIFY_BUDGET_TITLE,
+                body=nb.NOTIFY_BUDGET_BODY.format(detail=detail),
             )
         )
 
@@ -207,11 +208,8 @@ class Watcher:
             Notification(
                 kind=NotificationKind.STATUS_VOCABULARY_MISS,
                 severity=Severity.IMPORTANT,
-                title=f"Ukjent status for {row.code}",
-                body=(
-                    f"Studentweb svarte med tekst autofag ikke kjenner igjen:\n{row.status_text}\n"
-                    "Legg frasen inn i status_vocabulary i config."
-                ),
+                title=nb.NOTIFY_UNKNOWN_STATUS_TITLE.format(code=row.code),
+                body=nb.NOTIFY_UNKNOWN_STATUS_BODY.format(text=row.status_text),
                 course_code=row.code,
             )
         )

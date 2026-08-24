@@ -36,9 +36,7 @@ class RowStatus(Enum):
     UNKNOWN = "unknown"
 
 
-NEEDS_HUMAN_STATUSES = frozenset(
-    {RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING}
-)
+NEEDS_HUMAN_STATUSES = frozenset({RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING})
 
 
 @dataclass(frozen=True, slots=True)

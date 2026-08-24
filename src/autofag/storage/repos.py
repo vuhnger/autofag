@@ -38,9 +38,7 @@ class WatchlistRepository:
                 select(WatchEntryRow).where(WatchEntryRow.course_code == entry.code.value)
             )
             if row is None:
-                row = WatchEntryRow(
-                    course_code=entry.code.value, created_at=self._clock.now()
-                )
+                row = WatchEntryRow(course_code=entry.code.value, created_at=self._clock.now())
                 session.add(row)
             row.course_name = entry.name
             row.auto_enroll = int(entry.auto_enroll)
@@ -192,7 +190,9 @@ class DeliveryLog:
 
 
 class RunLock:
-    def __init__(self, session_factory: sessionmaker, clock: Clock, stale_after_seconds: float = 120.0) -> None:
+    def __init__(
+        self, session_factory: sessionmaker, clock: Clock, stale_after_seconds: float = 120.0
+    ) -> None:
         self._session_factory = session_factory
         self._clock = clock
         self._stale_after_seconds = stale_after_seconds

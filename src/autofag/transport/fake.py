@@ -100,6 +100,10 @@ class FakeStudentwebServer:
 
     def _render_page(self) -> str:
         token = self._issue_view()
+        search_onclick = (
+            f'PrimeFaces.ab({{s:"{SEARCH_BUTTON_ID}",f:"{FORM_ID}",'
+            f'p:"{FORM_ID}:frittSokKriteria",u:"{RESULT_REGION} {HITS_REGION}"}});return false;'
+        )
         return f"""<html><body>
 <form id="{FORM_ID}" action="/studentweb/aktiveemner.jsf" method="post">
   <input id="{FORM_ID}:emnekode" name="{FORM_ID}:emnekode" value="" />
@@ -114,7 +118,7 @@ class FakeStudentwebServer:
     <option value="15">Det matematisk-naturvitenskapelige fakultet</option>
     <option value="14">Det humanistiske fakultet</option>
   </select>
-  <button id="{SEARCH_BUTTON_ID}" onclick='PrimeFaces.ab({{s:"{SEARCH_BUTTON_ID}",f:"{FORM_ID}",p:"{FORM_ID}:frittSokKriteria",u:"{RESULT_REGION} {HITS_REGION}"}});return false;'>Søk</button>
+  <button id="{SEARCH_BUTTON_ID}" onclick='{search_onclick}'>Søk</button>
   <div id="{RESULT_REGION}"></div>
   <span id="{HITS_REGION}"></span>
   <table id="{TABLE_ID}"><tbody></tbody></table>
@@ -180,7 +184,7 @@ class FakeStudentwebServer:
                 f'PrimeFaces.ab({{s:"{button_id}",f:"{FORM_ID}",'
                 f'p:"{button_id}",u:"{CONFIRM_FORM}"}});return false;'
             )
-            button = f'<button id="{button_id}" onclick=\'{onclick}\'>Velg</button>'
+            button = f"<button id=\"{button_id}\" onclick='{onclick}'>Velg</button>"
         return (
             "<tr>"
             f'<td><div class="header">Emne</div>{escape(course.code)} {escape(course.name)}</td>'
@@ -245,10 +249,12 @@ class FakeStudentwebServer:
             for update_id, html in updates.items()
         )
         changes += (
-            '<update id="j_id__v_0:javax.faces.ViewState:0">'
-            f"<![CDATA[{view_state}]]></update>"
+            f'<update id="j_id__v_0:javax.faces.ViewState:0"><![CDATA[{view_state}]]></update>'
         )
-        body = f"<?xml version='1.0' encoding='UTF-8'?><partial-response><changes>{changes}</changes></partial-response>"
+        body = (
+            "<?xml version='1.0' encoding='UTF-8'?>"
+            f"<partial-response><changes>{changes}</changes></partial-response>"
+        )
         return HttpResponse(status_code=200, text=body)
 
     def _view_expired(self) -> str:
@@ -266,7 +272,9 @@ def default_courses() -> list[FakeCourse]:
         FakeCourse("IN5040", "Advanced Database Systems", status=RowStatus.NOT_OPEN_YET),
         FakeCourse("IN5170", "Models of concurrency", status=RowStatus.NOT_OPEN_YET),
         FakeCourse(
-            "HIS2010", "Samers rettigheter", status=RowStatus.NO_STUDY_RIGHT,
+            "HIS2010",
+            "Samers rettigheter",
+            status=RowStatus.NO_STUDY_RIGHT,
             has_select_button=False,
         ),
     ]

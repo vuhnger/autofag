@@ -106,5 +106,9 @@ def test_view_state_is_matched_by_suffix_not_exact_id(selectors):
 
 
 def test_partial_response_without_viewstate_reports_none(selectors):
-    xml = "<partial-response><changes><update id='x'><![CDATA[y]]></update></changes></partial-response>"
+    xml = (
+        "<partial-response><changes>"
+        "<update id='x'><![CDATA[y]]></update>"
+        "</changes></partial-response>"
+    )
     assert parse_partial_response(xml, selectors).view_state is None

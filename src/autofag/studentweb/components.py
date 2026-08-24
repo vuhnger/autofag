@@ -121,9 +121,11 @@ class ComponentMapScraper:
 
     def _options(self, soup: BeautifulSoup, suffix: str) -> tuple[SelectOption, ...]:
         select = soup.find(
-            lambda tag: tag.name == "select"
-            and isinstance(tag.get("id"), str)
-            and tag.get("id", "").endswith(suffix)
+            lambda tag: (
+                tag.name == "select"
+                and isinstance(tag.get("id"), str)
+                and tag.get("id", "").endswith(suffix)
+            )
         )
         if not isinstance(select, Tag):
             return ()

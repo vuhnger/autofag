@@ -149,7 +149,9 @@ class StudentwebSession:
 
         if dry_run:
             return EnrollResult(
-                code, EnrollOutcome.ABORTED, f"dry-run stopped before confirming via {confirm.source}"
+                code,
+                EnrollOutcome.ABORTED,
+                f"dry-run stopped before confirming via {confirm.source}",
             )
 
         confirm_response = self._postback_with_recovery(confirm, {})
@@ -178,9 +180,10 @@ class StudentwebSession:
             element_id = element.get("id")
             if not isinstance(element_id, str) or not element_id:
                 continue
-            label = element.get_text(" ", strip=True).casefold() or str(
-                element.get("value") or ""
-            ).casefold()
+            label = (
+                element.get_text(" ", strip=True).casefold()
+                or str(element.get("value") or "").casefold()
+            )
             if any(word in label for word in self._config.selectors.confirm_negative_labels):
                 continue
             if not any(word in label for word in self._config.selectors.confirm_positive_labels):
@@ -222,9 +225,7 @@ class StudentwebSession:
 
         return EnrollResult(code, EnrollOutcome.UNVERIFIED, "confirm response was not recognised")
 
-    def _search_fields(
-        self, components: ComponentMap, criteria: SearchCriteria
-    ) -> dict[str, str]:
+    def _search_fields(self, components: ComponentMap, criteria: SearchCriteria) -> dict[str, str]:
         return {
             components.course_code_input: criteria.course_code,
             components.course_name_input: criteria.course_name,
@@ -232,9 +233,7 @@ class StudentwebSession:
             components.faculty_select: criteria.faculty,
         }
 
-    def _search_field_values(
-        self, components: ComponentMap, code: CourseCode
-    ) -> dict[str, str]:
+    def _search_field_values(self, components: ComponentMap, code: CourseCode) -> dict[str, str]:
         return self._search_fields(components, SearchCriteria(course_code=code.value))
 
     def _search_result_from(

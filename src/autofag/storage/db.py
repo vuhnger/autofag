@@ -3,7 +3,16 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import DateTime, Engine, Float, Integer, String, Text, UniqueConstraint, create_engine
+from sqlalchemy import (
+    DateTime,
+    Engine,
+    Float,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from autofag.config import StorageConfig

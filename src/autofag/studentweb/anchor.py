@@ -24,9 +24,7 @@ class ViewAnchor:
     def with_view_state(self, view_state: str | None) -> ViewAnchor:
         if view_state is None:
             return replace(self, postback_count=self.postback_count + 1)
-        return replace(
-            self, view_state=view_state, postback_count=self.postback_count + 1
-        )
+        return replace(self, view_state=view_state, postback_count=self.postback_count + 1)
 
     def is_stale(self, now: datetime, max_postbacks: int, max_age_minutes: int) -> bool:
         if self.postback_count >= max_postbacks:

@@ -43,7 +43,9 @@ def decide(
         return _stopped(STOP_MAX_DURATION)
 
     if entry.last_status is RowStatus.UNKNOWN:
-        held = previous_tempo if previous_tempo not in (None, TempoClass.STOPPED) else TempoClass.WARM
+        held = (
+            previous_tempo if previous_tempo not in (None, TempoClass.STOPPED) else TempoClass.WARM
+        )
         return TempoDecision(held, _interval_for(held, config), "ukjent status, holder tempoet")
 
     if _inside_burst_window(entry, now, config):

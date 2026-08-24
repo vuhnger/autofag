@@ -4,7 +4,6 @@ import logging
 from datetime import timedelta
 
 from autofag.clock import FakeClock
-from autofag.config import AppConfig
 from autofag.models import CourseCode, NotificationKind, RowStatus, TempoClass, WatchEntry
 from autofag.notify.channels import RecordingChannel
 from autofag.notify.dispatcher import NotificationDispatcher

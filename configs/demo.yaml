@@ -1,0 +1,11 @@
+studentweb:
+  transport: fake
+notify:
+  macos:
+    enabled: true
+budget:
+  min_seconds_between_requests: 0.0
+watch:
+  tempo:
+    hot_seconds: 5.0
+    warm_seconds: 10.0

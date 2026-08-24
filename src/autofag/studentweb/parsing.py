@@ -61,7 +61,9 @@ def parse_partial_response(xml_text: str, selectors: SelectorConfig) -> PartialR
         name_element = error_element.find("error-name")
         message_element = error_element.find("error-message")
         error_name = (name_element.text or "").strip() if name_element is not None else None
-        error_message = (message_element.text or "").strip() if message_element is not None else None
+        error_message = (
+            (message_element.text or "").strip() if message_element is not None else None
+        )
 
     return PartialResponse(
         updates=updates,
@@ -98,7 +100,9 @@ def parse_search_results(
     page_index: int = 0,
 ) -> tuple[SearchResult, list[ParsedRow]]:
     soup = BeautifulSoup(html, "lxml")
-    table = soup.find(id=lambda value: bool(value) and value.endswith(selectors.result_table_suffix))
+    table = soup.find(
+        id=lambda value: bool(value) and value.endswith(selectors.result_table_suffix)
+    )
     parsed_rows: list[ParsedRow] = []
 
     if isinstance(table, Tag):
