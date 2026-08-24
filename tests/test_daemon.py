@@ -53,3 +53,20 @@ def test_stopping_a_process_that_is_already_gone_is_success():
 def test_a_dead_pid_is_not_alive():
     assert process_is_alive(999999) is False
     assert process_is_alive(os.getpid()) is True
+
+
+def test_re_acquiring_the_same_run_is_allowed():
+    lock = _run_lock()
+    lock.acquire("run-1")
+    lock.acquire("run-1")
+
+    active = running_watch(lock)
+    assert active is not None
+
+
+def test_the_stale_window_outlives_the_slowest_poll():
+    from autofag.config import AppConfig
+
+    config = AppConfig()
+
+    assert config.watch.run_stale_after_seconds() > config.watch.tempo.cold_seconds

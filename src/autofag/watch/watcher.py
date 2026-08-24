@@ -80,12 +80,14 @@ class Watcher:
                 return
             cycles += 1
             self._run_lock.heartbeat(self._run_id)
+            self._reconcile_schedule()
 
             course = self._next_due()
             if course is None:
                 break
 
             self._clock.sleep_until(course.due_at_monotonic)
+            self._run_lock.heartbeat(self._run_id)
             self._keepalive_if_idle()
 
             try:
@@ -102,11 +104,29 @@ class Watcher:
                 self._reschedule(course)
 
     def _seed_schedule(self) -> None:
+        self._reconcile_schedule()
+
+    def _reconcile_schedule(self) -> None:
         now_monotonic = self._clock.monotonic()
-        for entry in self._watchlist.active_entries():
-            self._scheduled[entry.code.value] = ScheduledCourse(
-                entry=entry, due_at_monotonic=now_monotonic, tempo=TempoClass.WARM
-            )
+        active = {entry.code.value: entry for entry in self._watchlist.active_entries()}
+
+        for code in list(self._scheduled):
+            if code not in active:
+                self._scheduled.pop(code)
+                self._logger.info("slutter å overvåke %s: den er ute av watchlisten", code)
+
+        for code, entry in active.items():
+            scheduled = self._scheduled.get(code)
+            if scheduled is None:
+                self._scheduled[code] = ScheduledCourse(
+                    entry=entry, due_at_monotonic=now_monotonic, tempo=TempoClass.WARM
+                )
+                self._logger.info("begynner å overvåke %s", code)
+            else:
+                scheduled.entry.auto_enroll = entry.auto_enroll
+                scheduled.entry.opens_at = entry.opens_at
+                scheduled.entry.expires_at = entry.expires_at
+                scheduled.entry.dialog_choices = entry.dialog_choices
 
     def _next_due(self) -> ScheduledCourse | None:
         if not self._scheduled:

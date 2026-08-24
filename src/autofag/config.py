@@ -164,6 +164,9 @@ class WatchConfig(BaseModel):
     max_duration_days: int = 120
     tempo: TempoConfig = Field(default_factory=TempoConfig)
 
+    def run_stale_after_seconds(self) -> float:
+        return max(300.0, self.tempo.cold_seconds * 2 + 60.0)
+
 
 class EnrollConfig(BaseModel):
     enabled: bool = True
