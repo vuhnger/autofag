@@ -14,3 +14,19 @@ Overvåker emner på UiO Studentweb og melder deg på når en plass blir ledig.
 autofag ser aldri passordet, fødselsnummeret eller PIN-koden din. Innloggingen skjer i
 browservinduet, og økten ligger i din egen lokale browserprofil. `autofag logout`
 sletter den.
+
+## Nyttige kommandoer
+
+```
+autofag init                  sett opp emner og varsling, og start overvåkingen
+autofag watch                 gjenoppta en watchlist du alt har satt opp
+autofag watch --dry-run       kjør hele løkka, men bekreft aldri en påmelding
+autofag status                se hva som overvåkes og hva sist status var
+autofag preview IN5170        gå gjennom påmeldingsdialogen uten å bekrefte noe
+autofag choose IN5170 "tid og form" "Høst 2026 - Avsluttende skriftlig eksamen"
+autofag doctor                sjekk at innlogging, søk og varsling virker
+autofag logout                slett den lokale browserprofilen
+```
+
+Autofag velger første alternativ i hver nedtrekksliste under påmelding og forteller
+deg hva den valgte. `autofag choose` overstyrer det per emne.
