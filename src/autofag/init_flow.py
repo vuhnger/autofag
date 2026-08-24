@@ -75,11 +75,12 @@ class InitWizard:
         self._dry_run = dry_run
 
     def run(self) -> InitOutcome:
+        kept = self._settle_existing_watchlist()
         selected = self._collect_courses()
         if not selected:
             raise WizardAborted(nb.SELECT_NONE_YET)
 
-        entries = [self._configure_watch(row) for row in selected]
+        entries = kept + [self._configure_watch(row) for row in selected]
         channels = self._configure_channels()
         if not self._review(entries, channels):
             self._presenter.info(nb.REVIEW_ABORTED)
@@ -91,6 +92,21 @@ class InitWizard:
 
         self._presenter.info(nb.WATCH_STARTED.format(count=len(entries)))
         return InitOutcome(entries=entries, channels=channels, started=True)
+
+    def _settle_existing_watchlist(self) -> list[WatchEntry]:
+        existing = self._watchlist.all_entries()
+        if not existing:
+            return []
+
+        codes = ", ".join(entry.code.value for entry in existing)
+        self._presenter.info(nb.INIT_EXISTING_WATCHLIST.format(codes=codes))
+        if self._prompter.confirm(nb.INIT_KEEP_EXISTING, default=False):
+            return existing
+
+        for entry in existing:
+            self._watchlist.remove(entry.code)
+        self._presenter.info(nb.INIT_REMOVED_EXISTING.format(codes=codes))
+        return []
 
     def _collect_courses(self) -> list[CourseRow]:
         selected: dict[str, CourseRow] = {}

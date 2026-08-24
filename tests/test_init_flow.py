@@ -129,3 +129,38 @@ def test_a_delivered_but_unseen_notification_offers_a_way_forward(config):
 
     assert outcome.channels == ["macos"]
     assert any("varslingstillatelser" in message for message in presenter.messages)
+
+
+def _seed(harness, codes):
+    from autofag.models import CourseCode, WatchEntry
+    from autofag.storage.repos import WatchlistRepository
+
+    watchlist = WatchlistRepository(harness.session_factory, harness.clock)
+    for code in codes:
+        watchlist.upsert(WatchEntry(code=CourseCode(code), name=code))
+    return watchlist
+
+
+def test_init_clears_the_old_watchlist_unless_you_keep_it(config):
+    harness = build_harness(config)
+    watchlist = _seed(harness, ["IN5020"])
+    answers = [False, "IN5170", True, "", "", ["macos"], True, True]
+    wizard, _, presenter = build_wizard(harness, answers)
+
+    outcome = wizard.run()
+
+    assert [entry.code.value for entry in outcome.entries] == ["IN5170"]
+    assert [entry.code.value for entry in watchlist.all_entries()] == ["IN5170"]
+    assert any("Fjernet" in message for message in presenter.messages)
+
+
+def test_init_can_keep_the_old_watchlist(config):
+    harness = build_harness(config)
+    watchlist = _seed(harness, ["IN5020"])
+    answers = [True, "IN5170", True, "", "", ["macos"], True, True]
+    wizard, _, _ = build_wizard(harness, answers)
+
+    outcome = wizard.run()
+
+    assert sorted(entry.code.value for entry in outcome.entries) == ["IN5020", "IN5170"]
+    assert sorted(entry.code.value for entry in watchlist.all_entries()) == ["IN5020", "IN5170"]
