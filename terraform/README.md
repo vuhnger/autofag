@@ -15,3 +15,7 @@ første `apply`. Den kan fjernes etterpå.
 
 `terraform.tfstate` ligger lokalt og er utenfor git. Sletter du den, adopterer
 `import`-blokken repoet på nytt.
+
+Releases lages av release-please: den samler Conventional Commits på main i en
+release-PR, og når du merger den, settes taggen og GitHub-releasen. `publish.yml`
+bygger og laster opp til PyPI når releasen publiseres.
