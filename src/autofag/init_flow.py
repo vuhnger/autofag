@@ -248,7 +248,12 @@ class InitWizard:
             self._presenter.warn(nb.CHANNEL_TEST_FAILED.format(channel=name, detail=failure.detail))
         if failures:
             return False
-        return self._prompter.confirm(nb.CHANNEL_TEST_CONFIRM.format(channel=name), default=True)
+
+        if self._prompter.confirm(nb.CHANNEL_TEST_CONFIRM.format(channel=name), default=True):
+            return True
+
+        self._presenter.warn(nb.CHANNEL_DELIVERED_BUT_UNSEEN.format(channel=name))
+        return self._prompter.confirm(nb.CHANNEL_USE_ANYWAY.format(channel=name), default=True)
 
     def _review(self, entries: list[WatchEntry], channels: list[str]) -> bool:
         self._presenter.table(

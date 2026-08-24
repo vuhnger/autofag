@@ -53,6 +53,12 @@ CHANNEL_TEST_SENDING = "Sender en testvarsling på {channel} ..."
 CHANNEL_TEST_CONFIRM = "Kom testvarslingen fram på {channel}?"
 CHANNEL_TEST_FAILED = "{channel} svarte: {detail}"
 CHANNEL_TEST_RETRY = "Vil du prøve å sette opp {channel} på nytt?"
+CHANNEL_DELIVERED_BUT_UNSEEN = (
+    "{channel} rapporterte at varselet ble sendt, så oppsettet er riktig.\n"
+    "Ser du det ikke, er det som regel varslingstillatelser: "
+    "Systeminnstillinger, Varsler, og finn terminalen du kjører autofag fra."
+)
+CHANNEL_USE_ANYWAY = "Vil du bruke {channel} likevel?"
 CHANNEL_NONE_WORKING_RETRY = (
     "Ingen av kanalene virket. Vi tar det på nytt, så du ikke ender opp uten varsling."
 )

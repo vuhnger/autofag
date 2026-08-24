@@ -118,3 +118,14 @@ def test_a_failing_channel_leads_back_to_the_channel_choice(config):
 
     assert outcome.channels == ["macos"]
     assert any("på nytt" in message for message in presenter.messages)
+
+
+def test_a_delivered_but_unseen_notification_offers_a_way_forward(config):
+    harness = build_harness(config)
+    answers = ["IN5170", True, "", "", ["macos"], False, True, True]
+    wizard, _, presenter = build_wizard(harness, answers)
+
+    outcome = wizard.run()
+
+    assert outcome.channels == ["macos"]
+    assert any("varslingstillatelser" in message for message in presenter.messages)
