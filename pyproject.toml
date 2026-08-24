@@ -57,7 +57,7 @@ autofag = ["fixtures/**/*"]
 version_file = "src/autofag/_version.py"
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
