@@ -122,7 +122,14 @@ class StudentwebSession:
             for _ in range(self._config.selectors.max_dialog_steps):
                 if self._pick(state, self._config.selectors.confirm_final_labels) is not None:
                     return steps
-                if state.unresolved_selects:
+                blocked = False
+                for select in state.unresolved_selects:
+                    only = select.only_option
+                    if only is None:
+                        blocked = True
+                        break
+                    state = self._page.choose(select.id, only.value)
+                if blocked:
                     return steps
                 forward = self._pick(state, self._config.selectors.confirm_forward_labels)
                 if forward is None:
