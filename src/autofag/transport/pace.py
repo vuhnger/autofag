@@ -11,6 +11,7 @@ from autofag.config import BudgetConfig
 from autofag.models import SearchCriteria
 from autofag.storage.repos import BudgetStore
 from autofag.studentweb.page import (
+    ConfirmDialogUnrecognised,
     NotAuthenticated,
     PageUnavailable,
     RawSearchResult,
@@ -90,7 +91,7 @@ class PacedStudentwebPage:
 
             try:
                 return action()
-            except NotAuthenticated:
+            except (NotAuthenticated, ConfirmDialogUnrecognised):
                 raise
             except PageUnavailable as error:
                 last_error = error

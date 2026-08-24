@@ -4,6 +4,8 @@ import threading
 from dataclasses import replace
 from logging import Logger
 
+from bs4 import BeautifulSoup
+
 from autofag import strings_nb as nb
 from autofag.clock import Clock
 from autofag.config import AppConfig
@@ -91,9 +93,17 @@ class StudentwebSession:
                 nb.ENROLL_NOT_TAKEABLE.format(status=parsed.row.status.value),
             )
 
-        dialog = self._page.open_confirm_dialog(parsed.row.select_button_id or "")
+        try:
+            dialog = self._page.open_confirm_dialog(parsed.row.select_button_id or "")
+        except ConfirmDialogUnrecognised as error:
+            return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+
         if code.value.casefold() not in dialog.casefold():
-            return EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_DIALOG_MISMATCH)
+            return EnrollResult(
+                code,
+                EnrollOutcome.ABORTED,
+                nb.ENROLL_DIALOG_MISMATCH.format(code=code, excerpt=_excerpt(dialog)),
+            )
 
         try:
             confirm_id = self._page.find_confirm_control()
@@ -135,3 +145,8 @@ class StudentwebSession:
         if declared_next is not None:
             result = replace(result, has_next_page=declared_next.lower() == "true")
         return result, parsed_rows
+
+
+def _excerpt(html: str, limit: int = 160) -> str:
+    text = " ".join(BeautifulSoup(html, "lxml").get_text(" ").split())
+    return text[:limit] or "(tom)"

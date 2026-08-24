@@ -126,7 +126,7 @@ BROWSER_FAILED = "Nettleseren startet ikke: {reason}"
 ENROLL_NOT_ONE_ROW = "forventet nøyaktig én rad, fikk {count}"
 ENROLL_WRONG_ROW = "raden var {found}, forventet {wanted}"
 ENROLL_NOT_TAKEABLE = "raden er ikke ledig: {status}"
-ENROLL_DIALOG_MISMATCH = "bekreftelsesdialogen nevnte ikke emnet"
+ENROLL_DIALOG_MISMATCH = "bekreftelsesdialogen nevnte ikke {code}. Dialogen sa: {excerpt}"
 ENROLL_DRY_RUN = "tørrkjøring stoppet før bekreftelse via {control}"
 ENROLL_UNRECOGNISED_RESPONSE = "svaret etter bekreftelse ble ikke gjenkjent"
 

@@ -60,6 +60,36 @@ READ_REGION_CONTAINING = """
 }
 """
 
+DIALOG_IS_READY = """
+(marker) => {
+  return [...document.querySelectorAll('[id]')]
+    .filter(node => node.id.includes(marker))
+    .some(node => node.offsetParent !== null && (node.innerText || '').trim().length > 0);
+}
+"""
+
+READ_VISIBLE_DIALOG = """
+(marker) => {
+  const node = [...document.querySelectorAll('[id]')]
+    .filter(el => el.id.includes(marker))
+    .find(el => el.offsetParent !== null && (el.innerText || '').trim().length > 0);
+  if (!node) return '';
+  return (node.closest('.ui-dialog') || node).outerHTML;
+}
+"""
+
+DESCRIBE_DIALOG_CANDIDATES = """
+(marker) => {
+  return [...document.querySelectorAll('[id]')]
+    .filter(el => el.id.includes(marker))
+    .map(el => ({
+      id: el.id,
+      visible: el.offsetParent !== null,
+      text: (el.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 80),
+    }));
+}
+"""
+
 HAS_NEXT_PAGE = """
 (className) => {
   return [...document.getElementsByClassName(className)]
@@ -79,9 +109,11 @@ CLICK_NEXT_PAGE = """
 
 FIND_CONFIRM_CONTROL = """
 (args) => {
-  const dialog = [...document.querySelectorAll('[id]')]
-    .find(node => node.id.includes(args.marker));
-  if (!dialog) return [];
+  const owner = [...document.querySelectorAll('[id]')]
+    .filter(node => node.id.includes(args.marker))
+    .find(node => node.offsetParent !== null && (node.innerText || '').trim().length > 0);
+  if (!owner) return [];
+  const dialog = owner.closest('.ui-dialog') || owner;
   return [...dialog.querySelectorAll('button, input[type=submit], a[id]')]
     .filter(el => el.id && el.offsetParent !== null)
     .map(el => ({id: el.id, label: (el.innerText || el.value || '').trim().toLowerCase()}));
@@ -155,8 +187,18 @@ class PlaywrightStudentwebPage:
 
     def open_confirm_dialog(self, button_id: str) -> str:
         page = self._ensure_page()
+        marker = self._config.selectors.confirm_form_marker
         self._click_and_wait(page, button_id)
-        dialog = page.evaluate(READ_REGION_CONTAINING, self._config.selectors.confirm_form_marker)
+
+        try:
+            page.wait_for_function(DIALOG_IS_READY, arg=marker, timeout=15000)
+        except PlaywrightTimeout as error:
+            seen = page.evaluate(DESCRIBE_DIALOG_CANDIDATES, marker)
+            raise ConfirmDialogUnrecognised(
+                f"bekreftelsesdialogen ble aldri synlig. Noder med {marker!r}: {seen}"
+            ) from error
+
+        dialog = page.evaluate(READ_VISIBLE_DIALOG, marker)
         if not dialog:
             raise ConfirmDialogUnrecognised("bekreftelsesdialogen dukket aldri opp")
         return dialog
@@ -165,6 +207,7 @@ class PlaywrightStudentwebPage:
         page = self._ensure_page()
         selectors = self._config.selectors
         controls = page.evaluate(FIND_CONFIRM_CONTROL, {"marker": selectors.confirm_form_marker})
+        self._logger.debug("kontroller i bekreftelsesdialogen: %s", controls)
         candidates = [
             control["id"]
             for control in controls

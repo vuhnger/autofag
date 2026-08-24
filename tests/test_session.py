@@ -94,3 +94,35 @@ def test_hourly_cap_stops_the_paced_page(config):
     with pytest.raises(BudgetExhausted):
         for _ in range(10):
             harness.session.search(SearchCriteria(course_code="IN5"))
+
+
+def test_a_dialog_that_names_another_course_aborts_and_says_what_it_saw(harness, monkeypatch):
+    harness.page.advance_to_takeable("IN5170")
+    monkeypatch.setattr(
+        harness.page,
+        "open_confirm_dialog",
+        lambda button_id: '<div id="leggTilEmneForm">Meld deg til IN9999?</div>',
+    )
+
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+
+    assert result.outcome is EnrollOutcome.ABORTED
+    assert "IN9999" in result.detail
+    assert harness.page.enrolled == []
+
+
+def test_a_dialog_that_never_appears_aborts_without_enrolling(harness, monkeypatch):
+    from autofag.studentweb.page import ConfirmDialogUnrecognised
+
+    harness.page.advance_to_takeable("IN5170")
+
+    def never(button_id: str) -> str:
+        raise ConfirmDialogUnrecognised("bekreftelsesdialogen ble aldri synlig")
+
+    monkeypatch.setattr(harness.page, "open_confirm_dialog", never)
+
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+
+    assert result.outcome is EnrollOutcome.ABORTED
+    assert "aldri synlig" in result.detail
+    assert harness.page.enrolled == []
