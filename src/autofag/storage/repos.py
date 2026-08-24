@@ -175,6 +175,20 @@ class DeliveryLog:
             )
         return row is not None
 
+    def count_delivered(self, notification: Notification, since: datetime) -> int:
+        with self._session_factory() as session:
+            rows = session.scalars(
+                select(NotificationDeliveryRow)
+                .where(NotificationDeliveryRow.kind == notification.kind.value)
+                .where(
+                    NotificationDeliveryRow.course_code
+                    == (notification.course_code.value if notification.course_code else "")
+                )
+                .where(NotificationDeliveryRow.delivered == 1)
+                .where(NotificationDeliveryRow.created_at >= since)
+            ).all()
+        return len({row.dedupe_key + str(row.created_at) for row in rows})
+
     def record(self, notification: Notification, results: list[DeliveryResult]) -> None:
         now = self._clock.now()
         with self._session_factory() as session, session.begin():
@@ -182,6 +196,9 @@ class DeliveryLog:
                 session.add(
                     NotificationDeliveryRow(
                         kind=notification.kind.value,
+                        course_code=(
+                            notification.course_code.value if notification.course_code else ""
+                        ),
                         channel=result.channel,
                         dedupe_key=notification.dedupe_key(),
                         delivered=int(result.delivered),

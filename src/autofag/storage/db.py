@@ -81,6 +81,7 @@ class NotificationDeliveryRow(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     kind: Mapped[str] = mapped_column(String(48))
+    course_code: Mapped[str] = mapped_column(String(32), default="", index=True)
     channel: Mapped[str] = mapped_column(String(32))
     dedupe_key: Mapped[str] = mapped_column(Text, index=True)
     delivered: Mapped[int] = mapped_column(Integer, default=0)

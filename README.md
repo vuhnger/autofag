@@ -32,3 +32,13 @@ autofag logout                slett den lokale browserprofilen
 
 Autofag velger første alternativ i hver nedtrekksliste under påmelding og forteller
 deg hva den valgte. `autofag choose` overstyrer det per emne.
+
+## Varsling
+
+Du får ett varsel per emne per kjøring, ikke ett per sjekk. Utfallet av en påmelding,
+tapt innlogging og oppbrukt timesbudsjett kommer alltid gjennom, uansett tak.
+
+```yaml
+notify:
+  max_per_course_per_run: 1   # 0 slår av taket
+```

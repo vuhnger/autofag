@@ -212,6 +212,14 @@ class NotifyConfig(BaseModel):
     macos: MacosConfig = Field(default_factory=MacosConfig)
     channel_timeout_seconds: float = 15.0
     dedupe_window_seconds: float = 300.0
+    max_per_course_per_run: int = 1
+    always_deliver_kinds: tuple[str, ...] = (
+        "test",
+        "enroll_outcome",
+        "needs_manual_check",
+        "session_expired",
+        "budget_exhausted",
+    )
     retry: RetryConfig = Field(default_factory=RetryConfig)
 
 

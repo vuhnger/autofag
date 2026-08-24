@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from logging import Logger
 from random import Random
 
@@ -51,6 +52,7 @@ class Services:
     presenter: Presenter
     outbound_http: OutboundHttpClient
     run_id: str
+    started_at: datetime
 
     def dispatcher(self, channel_names: list[str] | None = None) -> NotificationDispatcher:
         return NotificationDispatcher(
@@ -60,6 +62,7 @@ class Services:
             clock=self.clock,
             logger=self.logger,
             fallback=_macos_fallback(self.config),
+            run_started_at=self.started_at,
         )
 
 
@@ -101,6 +104,7 @@ def build_services(config: AppConfig, verbose: bool = False) -> Services:
         presenter=presenter,
         outbound_http=OutboundHttpClient(config.studentweb, config.notify.channel_timeout_seconds),
         run_id=uuid.uuid4().hex,
+        started_at=clock.now(),
     )
 
 
