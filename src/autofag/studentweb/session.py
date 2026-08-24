@@ -122,15 +122,10 @@ class StudentwebSession:
             for _ in range(self._config.selectors.max_dialog_steps):
                 if self._pick(state, self._config.selectors.confirm_final_labels) is not None:
                     return steps
-                blocked = False
                 for select in state.unresolved_selects:
-                    only = select.only_option
-                    if only is None:
-                        blocked = True
-                        break
-                    state = self._page.choose(select.id, only.value)
-                if blocked:
-                    return steps
+                    if not select.options:
+                        return steps
+                    state = self._page.choose(select.id, select.options[0].value)
                 forward = self._pick(state, self._config.selectors.confirm_forward_labels)
                 if forward is None:
                     return steps
@@ -143,6 +138,7 @@ class StudentwebSession:
         self, code: CourseCode, state: DialogState, dry_run: bool, choices: dict[str, str]
     ) -> EnrollResult:
         selectors = self._config.selectors
+        made: list[str] = []
 
         for _ in range(selectors.max_dialog_steps):
             if code.value.casefold() not in state.html.casefold():
@@ -152,7 +148,7 @@ class StudentwebSession:
                     nb.ENROLL_DIALOG_MISMATCH.format(code=code, excerpt=_excerpt(state.html)),
                 )
 
-            resolved = self._resolve_selects(code, state, choices)
+            resolved = self._resolve_selects(code, state, choices, made)
             if isinstance(resolved, EnrollResult):
                 return resolved
             state = resolved
@@ -167,7 +163,9 @@ class StudentwebSession:
                     self._page.advance_dialog(final.id)
                 except ConfirmDialogUnrecognised as error:
                     return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
-                return self._classify_outcome(code, self._page.read_outcome())
+                return self._with_choices(
+                    self._classify_outcome(code, self._page.read_outcome()), made
+                )
 
             forward = self._pick(state, selectors.confirm_forward_labels)
             if forward is None:
@@ -194,30 +192,40 @@ class StudentwebSession:
         )
 
     def _resolve_selects(
-        self, code: CourseCode, state: DialogState, choices: dict[str, str]
+        self,
+        code: CourseCode,
+        state: DialogState,
+        choices: dict[str, str],
+        made: list[str],
     ) -> DialogState | EnrollResult:
         for select in state.unresolved_selects:
+            field = select.label or select.id
             option = self._option_for(select, choices)
             if option is None:
                 return EnrollResult(
                     code,
                     EnrollOutcome.ABORTED,
-                    nb.ENROLL_CHOICE_NEEDED.format(
-                        field=select.label or select.id,
-                        options=", ".join(item.label for item in select.options) or "ingen",
-                    ),
+                    nb.ENROLL_NO_OPTIONS.format(field=field),
                 )
             try:
                 state = self._page.choose(select.id, option.value)
             except ConfirmDialogUnrecognised as error:
                 return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
+            made.append(nb.ENROLL_CHOICE_MADE.format(field=field, value=option.label))
         return state
 
     def _option_for(self, select: DialogSelect, choices: dict[str, str]):
         wanted = choices.get(select.label) or choices.get(select.id)
         if wanted:
-            return select.option_matching(wanted)
-        return select.only_option
+            preferred = select.option_matching(wanted)
+            if preferred is not None:
+                return preferred
+        return select.options[0] if select.options else None
+
+    def _with_choices(self, result: EnrollResult, made: list[str]) -> EnrollResult:
+        if not made:
+            return result
+        return EnrollResult(result.code, result.outcome, f"{result.detail}. {' '.join(made)}")
 
     def _pick(self, state: DialogState, labels: tuple[str, ...]):
         negatives = self._config.selectors.confirm_negative_labels

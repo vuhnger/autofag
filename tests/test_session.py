@@ -84,14 +84,13 @@ def test_a_single_option_dropdown_is_filled_in_automatically(harness):
     assert harness.page.enrolled == ["IN5170"]
 
 
-def test_a_real_choice_is_left_to_the_human_with_the_options_listed(harness):
+def test_a_choice_defaults_to_the_first_option_and_says_so(harness):
     harness.page.advance_to_takeable("IN5170")
     harness.page.select_options = ("Parti 1", "Parti 2")
     result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
-    assert result.outcome is EnrollOutcome.ABORTED
-    assert "undervisningsparti" in result.detail
-    assert "Parti 2" in result.detail
-    assert harness.page.enrolled == []
+    assert result.outcome is EnrollOutcome.CONFIRMED
+    assert "Valgte Parti 1 for undervisningsparti" in result.detail
+    assert harness.page.enrolled == ["IN5170"]
 
 
 def test_a_recorded_preference_resolves_the_choice(harness):
@@ -101,6 +100,7 @@ def test_a_recorded_preference_resolves_the_choice(harness):
         CourseCode("IN5170"), term="2026H", choices={"undervisningsparti": "Parti 2"}
     )
     assert result.outcome is EnrollOutcome.CONFIRMED
+    assert "Valgte Parti 2 for undervisningsparti" in result.detail
     assert harness.page.enrolled == ["IN5170"]
 
 
