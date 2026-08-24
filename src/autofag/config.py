@@ -71,6 +71,7 @@ class SelectorConfig(BaseModel):
         "ønsker ikke",
         "onsker ikke",
         "tilbake",
+        "forrige",
         "trekk",
     )
     max_dialog_steps: int = 6

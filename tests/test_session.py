@@ -168,3 +168,37 @@ def test_a_dialog_that_never_appears_aborts_without_enrolling(harness, monkeypat
     assert result.outcome is EnrollOutcome.ABORTED
     assert "aldri synlig" in result.detail
     assert harness.page.enrolled == []
+
+
+def test_a_back_button_is_never_treated_as_a_way_forward(config):
+    from autofag.studentweb.page import DialogControl, DialogState
+
+    state = DialogState(
+        html="IN5170",
+        controls=(
+            DialogControl(id="a", label="forrige"),
+            DialogControl(id="b", label="ønsker ikke eksamen"),
+            DialogControl(id="c", label="neste"),
+        ),
+    )
+    harness = build_harness(config)
+    forward = harness.session._pick(state, config.selectors.confirm_forward_labels)
+
+    assert forward is not None
+    assert forward.id == "c"
+
+
+def test_a_step_with_only_back_and_decline_has_no_way_forward(config):
+    from autofag.studentweb.page import DialogControl, DialogState
+
+    state = DialogState(
+        html="IN5170",
+        controls=(
+            DialogControl(id="a", label="forrige"),
+            DialogControl(id="b", label="ønsker ikke undervisning"),
+        ),
+    )
+    harness = build_harness(config)
+
+    assert harness.session._pick(state, config.selectors.confirm_forward_labels) is None
+    assert harness.session._pick(state, config.selectors.confirm_final_labels) is None

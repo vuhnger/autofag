@@ -145,7 +145,8 @@ READ_DIALOG_STATE = """
   const labelFor = (select) => {
     const labelled = select.labels && select.labels.length ? select.labels[0].innerText : '';
     const described = select.getAttribute('aria-label') || '';
-    return (labelled || described || select.name || select.id).trim().toLowerCase();
+    const text = (labelled || described || select.name || select.id).trim();
+    return text.replace(/[:\\s]+$/, '').toLowerCase();
   };
 
   const selects = [...dialog.querySelectorAll('select')]
