@@ -36,9 +36,7 @@ class RowStatus(Enum):
     UNKNOWN = "unknown"
 
 
-TERMINAL_STATUSES = frozenset(
-    {RowStatus.DEADLINE_PASSED, RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING}
-)
+NEEDS_HUMAN_STATUSES = frozenset({RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING})
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +98,7 @@ class WatchEntry:
     last_status_text: str = ""
     last_status_change_at: datetime | None = None
     stopped_reason: str | None = None
+    dialog_choices: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_stopped(self) -> bool:

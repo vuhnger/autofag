@@ -25,7 +25,7 @@ def default_data_dir() -> Path:
 class StudentwebConfig(BaseModel):
     base_url: str = "https://studentweb.uio.no/studentweb/"
     courses_path: str = "aktiveemner.jsf"
-    transport: Literal["real", "fake"] = "real"
+    transport: Literal["browser", "fake"] = "browser"
     fixtures_dir: Path | None = None
     request_timeout_seconds: float = 20.0
     connect_timeout_seconds: float = 10.0
@@ -51,6 +51,32 @@ class SelectorConfig(BaseModel):
     search_update_marker: str = "frittSokResultat"
     hit_count_marker: str = "frittSokMsgTreff"
     confirm_form_marker: str = "leggTilEmneForm"
+    teaching_section_labels: tuple[str, ...] = ("Undervisning", "Teaching")
+    exam_section_labels: tuple[str, ...] = ("Eksamen", "Examination", "Eksamen/vurdering")
+    confirm_forward_labels: tuple[str, ...] = ("neste", "next", "fortsett", "continue")
+    confirm_final_labels: tuple[str, ...] = (
+        "fullfør",
+        "fullfor",
+        "bekreft",
+        "lagre",
+        "meld deg",
+        "meld meg",
+        "finish",
+    )
+    confirm_negative_labels: tuple[str, ...] = (
+        "avbryt",
+        "nei",
+        "lukk",
+        "cancel",
+        "ønsker ikke",
+        "onsker ikke",
+        "tilbake",
+        "forrige",
+        "trekk",
+    )
+    max_dialog_steps: int = 6
+    header_label_class: str = "header"
+    detail_toggle_class: str = "skalKunneTogglesContainer"
     paginator_next_class: str = "ui-paginator-next"
     view_state_marker: str = "javax.faces.ViewState"
     release_pattern: str = r"Studentweb\s+([0-9]+-[0-9.]+(?:\s+[0-9:]+)?)"
@@ -78,6 +104,26 @@ class StatusVocabularyConfig(BaseModel):
                 "du har allerede meldt deg til undervisning",
             ),
         }
+    )
+
+
+class EnrollVocabularyConfig(BaseModel):
+    confirmed: tuple[str, ...] = (
+        "du har plass på undervisningen",
+        "du er meldt til undervisning",
+        "undervisningsmelding er registrert",
+        "meldingen er registrert",
+    )
+    waitlisted: tuple[str, ...] = ("venteliste",)
+    full: tuple[str, ...] = (
+        "emnet er fullt",
+        "det er ikke flere ledige plasser",
+        "ingen ledige plasser",
+    )
+    rejected: tuple[str, ...] = (
+        "du har ikke studierett",
+        "krav om forkunnskaper",
+        "fristen",
     )
 
 
@@ -129,7 +175,7 @@ class AuthConfig(BaseModel):
     profile_dir: Path | None = None
     login_timeout_seconds: float = 600.0
     headless: bool = False
-    logged_in_marker: str = "aktiveemner.jsf"
+    signed_in_selector: str = 'a[href*="aktiveemner.jsf"]'
 
 
 class NtfyConfig(BaseModel):
@@ -189,6 +235,7 @@ class AppConfig(BaseModel):
     session: SessionConfig = Field(default_factory=SessionConfig)
     watch: WatchConfig = Field(default_factory=WatchConfig)
     enroll: EnrollConfig = Field(default_factory=EnrollConfig)
+    enroll_vocabulary: EnrollVocabularyConfig = Field(default_factory=EnrollVocabularyConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     notify: NotifyConfig = Field(default_factory=NotifyConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
