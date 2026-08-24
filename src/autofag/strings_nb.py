@@ -171,3 +171,7 @@ STOP_OTHER_HOST = "Overvåkingen kjører på {host}, ikke her. Stopp den der."
 STOP_SENT = "Ba pid {pid} om å stoppe."
 STOP_STOPPED = "Overvåkingen er stoppet."
 STOP_STILL_RUNNING = "Pid {pid} svarte ikke innen {seconds} sekunder. Stopp den manuelt."
+
+INIT_EXISTING_WATCHLIST = "Du overvåker allerede: {codes}"
+INIT_KEEP_EXISTING = "Vil du beholde dem?"
+INIT_REMOVED_EXISTING = "Fjernet: {codes}"
