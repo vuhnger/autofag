@@ -12,6 +12,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    inspect,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
@@ -105,7 +107,53 @@ def create_database(config: StorageConfig) -> tuple[Engine, sessionmaker]:
 
     engine = create_engine(config.database_url(), future=True)
     Base.metadata.create_all(engine)
+    add_missing_columns(engine)
     return engine, sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+
+class SchemaTooOld(RuntimeError):
+    pass
+
+
+def add_missing_columns(engine: Engine) -> list[str]:
+    inspector = inspect(engine)
+    added: list[str] = []
+
+    with engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+
+                fallback = _scalar_default(column)
+                if fallback is None and not column.nullable:
+                    raise SchemaTooOld(
+                        f"{table.name}.{column.name} kan ikke legges til uten standardverdi"
+                    )
+
+                column_type = column.type.compile(engine.dialect)
+                connection.execute(
+                    text(f"ALTER TABLE {table.name} ADD COLUMN {column.name} {column_type}")
+                )
+                if fallback is not None:
+                    connection.execute(
+                        text(f"UPDATE {table.name} SET {column.name} = :value"),
+                        {"value": fallback},
+                    )
+                added.append(f"{table.name}.{column.name}")
+
+    return added
+
+
+def _scalar_default(column) -> object | None:
+    default = column.default
+    if default is None:
+        return None
+    argument = getattr(default, "arg", None)
+    return argument if not callable(argument) else None
 
 
 def create_memory_database() -> tuple[Engine, sessionmaker]:
