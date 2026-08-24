@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, wait
+from datetime import datetime
 from logging import Logger
 
 from autofag import strings_nb as nb
@@ -10,8 +11,6 @@ from autofag.config import NotifyConfig
 from autofag.models import DeliveryResult, Notification, NotificationKind, Severity
 from autofag.notify.protocol import NotificationChannel
 from autofag.storage.repos import DeliveryLog
-
-ALWAYS_DELIVER = frozenset({NotificationKind.TEST, NotificationKind.ENROLL_OUTCOME})
 
 
 class NotificationDispatcher:
@@ -23,6 +22,7 @@ class NotificationDispatcher:
         clock: Clock,
         logger: Logger,
         fallback: NotificationChannel | None = None,
+        run_started_at: datetime | None = None,
     ) -> None:
         self._channels = list(channels)
         self._delivery_log = delivery_log
@@ -30,6 +30,7 @@ class NotificationDispatcher:
         self._clock = clock
         self._logger = logger
         self._fallback = fallback
+        self._run_started_at = run_started_at or clock.now()
 
     @property
     def channel_names(self) -> list[str]:
@@ -51,8 +52,21 @@ class NotificationDispatcher:
         return results
 
     def _should_skip(self, notification: Notification) -> bool:
-        if notification.kind in ALWAYS_DELIVER:
+        if notification.kind.value in self._config.always_deliver_kinds:
             return False
+
+        cap = self._config.max_per_course_per_run
+        if cap > 0 and notification.course_code is not None:
+            already = self._delivery_log.count_delivered(notification, self._run_started_at)
+            if already >= cap:
+                self._logger.info(
+                    "hopper over %s for %s: %s varsel er nok for denne kjøringen",
+                    notification.kind.value,
+                    notification.course_code,
+                    cap,
+                )
+                return True
+
         return self._delivery_log.was_delivered_recently(
             notification, self._config.dedupe_window_seconds
         )
