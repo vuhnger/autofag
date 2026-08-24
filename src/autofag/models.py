@@ -36,8 +36,8 @@ class RowStatus(Enum):
     UNKNOWN = "unknown"
 
 
-TERMINAL_STATUSES = frozenset(
-    {RowStatus.DEADLINE_PASSED, RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING}
+NEEDS_HUMAN_STATUSES = frozenset(
+    {RowStatus.NO_STUDY_RIGHT, RowStatus.PREREQUISITES_MISSING}
 )
 
 
