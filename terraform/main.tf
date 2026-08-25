@@ -10,7 +10,7 @@ module "autofag" {
   visibility  = "public"
   topics      = ["uio", "studentweb", "cli", "python", "playwright"]
 
-  required_status_checks = ["test", "Conventional Commit title"]
+  required_status_checks = ["test", "install", "Conventional Commit title"]
   required_approvals     = 0
 }
 
