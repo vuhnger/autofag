@@ -200,8 +200,9 @@ def preview(
     _authenticate(services)
 
     code = CourseCode(course)
+    entry = next((item for item in services.watchlist.all_entries() if item.code == code), None)
     try:
-        steps = services.session.preview_enrollment(code)
+        steps = services.session.preview_enrollment(code, entry.dialog_choices if entry else None)
     except (ConfirmDialogUnrecognised, PageUnavailable, TransportError) as error:
         services.presenter.warn(str(error))
         raise typer.Exit(code=1) from error

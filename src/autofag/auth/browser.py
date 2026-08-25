@@ -180,7 +180,11 @@ READ_DIALOG_STATE = """
       selected: el.value || '',
       options: [...el.options]
         .filter(option => option.value)
-        .map(option => ({value: option.value, label: option.text.trim()})),
+        .map(option => ({
+          value: option.value,
+          label: option.text.trim(),
+          disabled: option.disabled || option.hasAttribute('disabled'),
+        })),
     }));
 
   return {html: dialog.outerHTML, controls: controls, selects: selects};
@@ -316,7 +320,11 @@ class PlaywrightStudentwebPage:
                     id=item["id"],
                     label=item["label"],
                     options=tuple(
-                        DialogOption(value=option["value"], label=option["label"])
+                        DialogOption(
+                            value=option["value"],
+                            label=option["label"],
+                            disabled=bool(option.get("disabled")),
+                        )
                         for option in item["options"]
                     ),
                     selected=item["selected"],
