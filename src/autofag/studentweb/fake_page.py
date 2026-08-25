@@ -54,6 +54,7 @@ class FakeStudentwebPage:
     dialog_steps: int = 2
     select_options: tuple[str, ...] = ()
     full_select: bool = False
+    disabled_options: tuple[str, ...] = ()
     drop_next_confirm: bool = False
     lose_race_on_confirm: bool = False
     offer_forward: bool = True
@@ -185,7 +186,10 @@ class FakeStudentwebPage:
                     id=select_id,
                     label="undervisningsparti",
                     options=tuple(
-                        DialogOption(value=label, label=label) for label in self.select_options
+                        DialogOption(
+                            value=label, label=label, disabled=label in self.disabled_options
+                        )
+                        for label in self.select_options
                     ),
                     selected=self._chosen.get(select_id, ""),
                 ),

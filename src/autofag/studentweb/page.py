@@ -49,6 +49,7 @@ class DialogControl:
 class DialogOption:
     value: str
     label: str
+    disabled: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +67,8 @@ class DialogSelect:
         return tuple(
             option
             for option in self.options
-            if not any(word in option.label.casefold() for word in unavailable_labels)
+            if not option.disabled
+            and not any(word in option.label.casefold() for word in unavailable_labels)
         )
 
     def option_matching(self, wanted: str) -> DialogOption | None:

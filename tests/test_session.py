@@ -245,3 +245,39 @@ def test_preview_uses_the_saved_choice_for_the_course(harness):
     harness.session.preview_enrollment(CourseCode("IN5170"), {"undervisningsparti": "Parti 2"})
 
     assert "Parti 2" in harness.page.chosen_values()
+
+
+def test_the_one_free_option_among_several_full_ones_is_the_one_chosen(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = (
+        "Parti 1 Ingen ledig plass",
+        "Parti 2 fullt",
+        "Parti 3 Ingen ledige plasser",
+        "Parti 4 Onsdag 10:15",
+    )
+
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+
+    assert result.outcome is EnrollOutcome.CONFIRMED
+    assert harness.page.chosen_values() == ("Parti 4 Onsdag 10:15",)
+
+
+def test_a_saved_choice_is_ignored_when_that_option_is_full(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = ("Parti 1 fullt", "Parti 2 Onsdag 10:15")
+
+    harness.session.enroll(
+        CourseCode("IN5170"), term="2026H", choices={"undervisningsparti": "Parti 1 fullt"}
+    )
+
+    assert harness.page.chosen_values() == ("Parti 2 Onsdag 10:15",)
+
+
+def test_an_option_disabled_by_studentweb_is_never_chosen(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.disabled_options = ("Parti 1 Onsdag 10:15",)
+    harness.page.select_options = ("Parti 1 Onsdag 10:15", "Parti 2 Torsdag 12:15")
+
+    harness.session.enroll(CourseCode("IN5170"), term="2026H")
+
+    assert harness.page.chosen_values() == ("Parti 2 Torsdag 12:15",)
