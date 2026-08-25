@@ -53,8 +53,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Install as a tool
-        run: uv tool install .
+      - name: Clone and run
+        run: uv run autofag version
+
+      - name: Install the way the README says
+        run: uv tool install "git+file://$PWD"
 
       - name: Command is on PATH
         run: autofag version
