@@ -86,7 +86,10 @@ class Watcher:
             if course is None:
                 break
 
-            self._clock.sleep_until(course.due_at_monotonic)
+            self._sleep_until(course.due_at_monotonic)
+            if self._stop_requested:
+                self._logger.info("stopper etter forespørsel")
+                return
             self._run_lock.heartbeat(self._run_id)
             self._keepalive_if_idle()
 
@@ -102,6 +105,13 @@ class Watcher:
             except TransportError as error:
                 self._logger.warning("check for %s failed: %s", course.entry.code, error)
                 self._reschedule(course)
+
+    def _sleep_until(self, deadline_monotonic: float) -> None:
+        while not self._stop_requested:
+            remaining = deadline_monotonic - self._clock.monotonic()
+            if remaining <= 0:
+                return
+            self._clock.sleep_until(self._clock.monotonic() + min(remaining, 1.0))
 
     def _seed_schedule(self) -> None:
         self._reconcile_schedule()

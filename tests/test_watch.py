@@ -213,3 +213,16 @@ def test_a_running_watch_picks_up_a_course_added_afterwards(config):
         entry.code.value for entry in watchlist.all_entries() if entry.last_status is not None
     }
     assert observed == {"IN5040", "IN5170"}
+
+
+def test_a_stop_request_interrupts_a_long_sleep(config):
+    config.watch.tempo.warm_seconds = 3600.0
+    harness = build_harness(config)
+    watcher, _, _ = build_watcher(harness, ["IN5040"])
+
+    watcher.run(max_cycles=1)
+    before = harness.clock.monotonic()
+    watcher.request_stop()
+    watcher.run(max_cycles=5)
+
+    assert harness.clock.monotonic() - before < 5.0
