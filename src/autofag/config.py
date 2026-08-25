@@ -75,6 +75,15 @@ class SelectorConfig(BaseModel):
         "trekk",
     )
     max_dialog_steps: int = 6
+    idle_dialog_markers: tuple[str, ...] = (
+        "du blir logget ut",
+        "du blir logga ut",
+        "you will be logget out",
+        "you will be logged out",
+        "har vært inaktiv",
+        "been idle for too long",
+    )
+    idle_dismiss_labels: tuple[str, ...] = ("velg", "select", "fortsett", "continue", "ok")
     header_label_class: str = "header"
     detail_toggle_class: str = "skalKunneTogglesContainer"
     paginator_next_class: str = "ui-paginator-next"
