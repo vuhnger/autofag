@@ -171,3 +171,9 @@ INIT_KEEP_EXISTING = "Vil du beholde dem?"
 INIT_REMOVED_EXISTING = "Fjernet: {codes}"
 
 ENROLL_NO_FREE_PLACE = "ingen ledig plass i {field}. Studentweb tilbød: {options}"
+
+BROWSER_INSTALLING = "Laster ned nettleseren autofag bruker. Dette skjer bare første gang."
+BROWSER_INSTALL_FAILED = (
+    "klarte ikke å laste ned nettleseren: {reason}. "
+    "Kjør «python -m playwright install chromium» selv og prøv igjen."
+)

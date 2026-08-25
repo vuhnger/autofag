@@ -11,7 +11,7 @@ RESTRICTED_MODULES = {
     "httpx": {"notify/http.py"},
     "playwright": {"auth/browser.py"},
     "keyring": {"storage/secrets.py"},
-    "subprocess": {"notify/channels.py", "daemon.py"},
+    "subprocess": {"notify/channels.py", "daemon.py", "auth/bootstrap.py"},
     "smtplib": {"notify/channels.py"},
     "questionary": {"prompts.py"},
     "rich": {"presentation.py"},
