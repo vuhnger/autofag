@@ -4,18 +4,27 @@ Overvåker emner på UiO Studentweb og melder deg på når en plass blir ledig.
 
 ## Kom i gang
 
-1. `uv tool install git+https://github.com/vuhnger/autofag`
-2. `autofag init`
-3. Logg inn i vinduet som åpnes.
-4. Søk opp emnene du vil ha, og velg dem.
-5. Velg hvordan du vil varsles.
-6. La den stå og gå.
+Du trenger ingenting installert fra før. `uv` henter både Python og nettleseren.
 
-Første gang laster autofag ned nettleseren den bruker, og det tar et par minutter.
+1. Installer `uv`: `brew install uv`, `winget install astral-sh.uv`, eller
+   se https://docs.astral.sh/uv/getting-started/installation/
+2. `uv tool install git+https://github.com/vuhnger/autofag`
+3. Blir ikke `autofag` funnet: kjør `uv tool update-shell` og åpne en ny terminal
+4. `autofag init`
+5. Logg inn i vinduet som åpnes
+6. Søk opp emnene du vil ha, og velg dem
+7. Velg hvordan du vil varsles
+8. La den stå og gå
+
+Første kjøring laster ned nettleseren autofag bruker, rundt 150 MB. Det skjer bare én
+gang.
+
+Oppdater med `uv tool install --force git+https://github.com/vuhnger/autofag`.
+`uv tool uninstall autofag` fjerner verktøyet, men lar emnelista og browserprofilen i
+`~/.local/share/autofag` ligge; `autofag logout` sletter profilen.
 
 autofag ser aldri passordet, fødselsnummeret eller PIN-koden din. Innloggingen skjer i
-browservinduet, og økten ligger i din egen lokale browserprofil. `autofag logout`
-sletter den.
+browservinduet, og økten ligger i din egen lokale browserprofil.
 
 ## Nyttige kommandoer
 
