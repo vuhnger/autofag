@@ -46,9 +46,6 @@ class PacedStudentwebPage:
         self._lock = threading.Lock()
         self._next_allowed_monotonic = 0.0
 
-    def budget_remaining(self) -> int:
-        return max(0, self._budget_config.requests_per_hour - self._budget_store.used_this_hour())
-
     def log_in(self, instructions: str) -> None:
         self._page.log_in(instructions)
 

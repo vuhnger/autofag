@@ -9,11 +9,6 @@ from autofag.models import RowStatus
 @dataclass(frozen=True, slots=True)
 class Classification:
     status: RowStatus
-    matched_phrase: str | None
-
-    @property
-    def is_vocabulary_miss(self) -> bool:
-        return self.status is RowStatus.UNKNOWN
 
 
 class StatusClassifier:
@@ -27,13 +22,13 @@ class StatusClassifier:
     def classify(self, teaching_status_text: str) -> Classification:
         haystack = _normalize(teaching_status_text)
         if not haystack:
-            return Classification(RowStatus.UNKNOWN, None)
+            return Classification(RowStatus.UNKNOWN)
 
         for status, phrase in self._ordered_phrases:
             if phrase in haystack:
-                return Classification(status, phrase)
+                return Classification(status)
 
-        return Classification(RowStatus.UNKNOWN, None)
+        return Classification(RowStatus.UNKNOWN)
 
 
 def _normalize(text: str) -> str:

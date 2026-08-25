@@ -61,9 +61,6 @@ class SearchCriteria:
     subject: str = ""
     faculty: str = ""
 
-    def is_empty(self) -> bool:
-        return not any((self.course_code, self.course_name, self.subject, self.faculty))
-
 
 @dataclass(frozen=True, slots=True)
 class SearchResult:

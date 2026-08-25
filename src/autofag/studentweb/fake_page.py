@@ -14,7 +14,6 @@ from autofag.studentweb.page import (
     PageUnavailable,
     RawSearchResult,
     SearchFilters,
-    SelectOption,
 )
 
 TABLE_ID = "aktiveEmnerForm:sokResultatDataTable"
@@ -75,14 +74,7 @@ class FakeStudentwebPage:
 
     def open(self) -> SearchFilters:
         self._act("open")
-        return SearchFilters(
-            subjects=(SelectOption("INF", "Informatikk"), SelectOption("HIST", "Historie")),
-            faculties=(
-                SelectOption("15", "Det matematisk-naturvitenskapelige fakultet"),
-                SelectOption("14", "Det humanistiske fakultet"),
-            ),
-            release=RELEASE,
-        )
+        return SearchFilters(release=RELEASE)
 
     def search(self, criteria: SearchCriteria) -> RawSearchResult:
         self._act("search")

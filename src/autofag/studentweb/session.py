@@ -80,15 +80,15 @@ class StudentwebSession:
         on_spot_confirmed: Callable[[], None] | None = None,
     ) -> EnrollResult:
         with self._lock:
-            return self._enroll_locked(code, term, dry_run, choices or {}, on_spot_confirmed)
+            return self._enroll_locked(code, dry_run, choices or {}, on_spot_confirmed)
 
     def _enroll_locked(
         self,
         code: CourseCode,
-        term: str,
         dry_run: bool,
         choices: dict[str, str],
         on_spot_confirmed: Callable[[], None] | None,
+        visited: list[DialogState] | None = None,
     ) -> EnrollResult:
         result, parsed_rows = self._parse(self._page.search(SearchCriteria(course_code=code.value)))
 
@@ -116,46 +116,21 @@ class StudentwebSession:
         except ConfirmDialogUnrecognised as error:
             return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
 
-        return self._walk_dialog(code, state, dry_run, choices, on_spot_confirmed)
+        return self._walk_dialog(code, state, dry_run, choices, on_spot_confirmed, visited)
 
     def preview_enrollment(
         self, code: CourseCode, choices: dict[str, str] | None = None
     ) -> list[DialogState]:
         with self._lock:
-            row = self.search_exact(code)
-            if row is None or not row.is_takeable:
-                raise ConfirmDialogUnrecognised(nb.PREVIEW_NOT_TAKEABLE.format(code=code))
-
-            state = self._page.open_confirm_dialog(row.select_button_id or "")
-            steps = [state]
-
-            for _ in range(self._config.selectors.max_dialog_steps):
-                if self._pick(state, self._config.selectors.confirm_final_labels) is not None:
-                    return steps
-                state = self._preview_selects(code, state, choices or {})
-                forward = self._pick(state, self._config.selectors.confirm_forward_labels)
-                if forward is None:
-                    return steps
-                state = self._page.advance_dialog(forward.id)
-                steps.append(state)
-
+            steps: list[DialogState] = []
+            result = self._enroll_locked(
+                code, dry_run=True, choices=choices or {}, on_spot_confirmed=None, visited=steps
+            )
+            if result.outcome is EnrollOutcome.FULL:
+                raise NoFreePlace(nb.PREVIEW_NO_FREE_PLACE.format(code=code, detail=result.detail))
+            if not steps:
+                raise ConfirmDialogUnrecognised(result.detail)
             return steps
-
-    def _preview_selects(
-        self, code: CourseCode, state: DialogState, choices: dict[str, str]
-    ) -> DialogState:
-        for select in state.unresolved_selects:
-            option = self._option_for(select, choices)
-            if option is None:
-                raise NoFreePlace(
-                    nb.PREVIEW_NO_FREE_PLACE.format(
-                        code=code,
-                        field=select.label or select.id,
-                        options=", ".join(item.label for item in select.options) or "ingen",
-                    )
-                )
-            state = self._page.choose(select.id, option.value)
-        return state
 
     def _walk_dialog(
         self,
@@ -164,12 +139,15 @@ class StudentwebSession:
         dry_run: bool,
         choices: dict[str, str],
         on_spot_confirmed: Callable[[], None] | None = None,
+        visited: list[DialogState] | None = None,
     ) -> EnrollResult:
         selectors = self._config.selectors
         made: list[str] = []
         announced = False
 
         for _ in range(selectors.max_dialog_steps):
+            if visited is not None:
+                visited.append(state)
             if code.value.casefold() not in state.html.casefold():
                 return EnrollResult(
                     code,
@@ -207,11 +185,6 @@ class StudentwebSession:
                     code,
                     EnrollOutcome.ABORTED,
                     nb.ENROLL_NO_WAY_FORWARD.format(labels=state.labels()),
-                )
-
-            if dry_run:
-                return EnrollResult(
-                    code, EnrollOutcome.ABORTED, nb.ENROLL_DRY_RUN.format(control=forward.label)
                 )
 
             try:

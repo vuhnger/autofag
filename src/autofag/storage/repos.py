@@ -147,16 +147,7 @@ class BudgetStore:
             if row.request_count >= limit_per_hour:
                 return False
             row.request_count += 1
-            row.last_request_monotonic = self._clock.monotonic()
             return True
-
-    def used_this_hour(self) -> int:
-        bucket = self._clock.now().strftime("%Y-%m-%dT%H")
-        with self._session_factory() as session:
-            row = session.scalar(
-                select(RequestBudgetRow).where(RequestBudgetRow.hour_bucket == bucket)
-            )
-        return row.request_count if row else 0
 
 
 class DeliveryLog:

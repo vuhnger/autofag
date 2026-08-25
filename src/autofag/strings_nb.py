@@ -10,8 +10,6 @@ LOGIN_DONE = "Innlogget. Økten ligger i din egen lokale nettleserprofil."
 LOGIN_FAILED = "Fikk ikke logget inn: {reason}"
 
 SEARCH_PROMPT = "Søk etter emne (emnekode eller navn). Tom linje = ferdig"
-SEARCH_FILTER_SUBJECT = "Begrens til fag (valgfritt)"
-SEARCH_FILTER_FACULTY = "Begrens til fakultet (valgfritt)"
 SEARCH_NO_HITS = "Ingen treff. Prøv et annet søk."
 SEARCH_HITS = "{shown} av {total} treff"
 SEARCH_MORE_PAGES = "Det finnes flere sider med treff. Snevre inn søket for å se resten."
@@ -138,9 +136,6 @@ INTERRUPTED = "Stoppet."
 SEARCH_FAILED = "Søket feilet: {reason}. Prøv igjen, eller trykk Ctrl+C for å avslutte."
 WATCH_CRASHED = "Overvåkingen stoppet: {reason}"
 
-ENROLL_NEEDS_A_CHOICE = (
-    "dialogen krever et valg autofag ikke tar for deg ({fields}). Fullfør påmeldingen manuelt."
-)
 ENROLL_NO_WAY_FORWARD = "fant ingen trygg knapp å gå videre med. Kontroller i dialogen: {labels}"
 ENROLL_TOO_MANY_STEPS = "dialogen tok mer enn {steps} steg, stoppet for sikkerhets skyld"
 
@@ -148,10 +143,7 @@ CHANNEL_PORT_NOT_A_NUMBER = "{answer} er ikke et portnummer. Skriv bare tallet, 
 ENROLL_STILL_UNVERIFIED = "{detail}; emnet står som {status}, så plassen er ikke bekreftet"
 
 
-PREVIEW_NOT_TAKEABLE = "{code} har ingen ledig plass akkurat nå, så dialogen kan ikke åpnes."
-PREVIEW_NO_FREE_PLACE = (
-    "{code} ser ledig ut i lista, men {field} har ingen plass å velge. Studentweb tilbød: {options}"
-)
+PREVIEW_NO_FREE_PLACE = "{code} ser ledig ut i lista, men {detail}"
 PREVIEW_HEADER = "Påmeldingsdialogen for {code}"
 PREVIEW_STEP = "Steg {step}"
 PREVIEW_CONTROLS = "Knapper"
@@ -163,7 +155,6 @@ CHOICE_SAVED = "Lagret: {code} velger {value} for {field}."
 CHOICE_UNKNOWN_COURSE = "{code} står ikke i watchlisten."
 
 ENROLL_CHOICE_MADE = "Valgte {value} for {field}."
-ENROLL_NO_OPTIONS = "{field} hadde ingen alternativer å velge mellom."
 
 DETACHED_STARTED = (
     "Overvåkingen kjører i bakgrunnen (pid {pid}).\nLogg: {log}\nStopp med: autofag stop"

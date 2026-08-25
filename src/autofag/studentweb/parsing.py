@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 from lxml import etree  # ty: ignore[unresolved-import]
 
 from autofag.config import SelectorConfig
-from autofag.models import CourseCode, CourseRow, InvalidCourseCode, RowStatus, SearchResult
+from autofag.models import CourseCode, CourseRow, InvalidCourseCode, SearchResult
 from autofag.studentweb.status import Classification, StatusClassifier
 
 HIT_COUNT_PATTERN = re.compile(r"\((\d+)\s")
@@ -71,16 +71,6 @@ def parse_partial_response(xml_text: str, selectors: SelectorConfig) -> PartialR
         error_name=error_name,
         error_message=error_message,
     )
-
-
-def extract_view_state_from_html(html: str, selectors: SelectorConfig) -> str | None:
-    soup = BeautifulSoup(html, "lxml")
-    field = soup.find("input", attrs={"name": selectors.view_state_marker})
-    if isinstance(field, Tag):
-        value = field.get("value")
-        if isinstance(value, str) and value:
-            return value
-    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -250,15 +240,3 @@ def _class_list(node: Tag) -> list[str]:
 def _element_id(node: Tag) -> str:
     value = node.get("id")
     return value if isinstance(value, str) else ""
-
-
-def looks_like_login_page(html: str, selectors: SelectorConfig) -> bool:
-    return any(marker in html for marker in selectors.login_markers)
-
-
-def looks_like_view_expired(text: str, selectors: SelectorConfig) -> bool:
-    return any(marker in text for marker in selectors.view_expired_markers)
-
-
-def parse_status_only(text: str, classifier: StatusClassifier) -> RowStatus:
-    return classifier.classify(text).status
