@@ -10,6 +10,11 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
 from autofag import strings_nb as nb
+from autofag.auth.bootstrap import (
+    BrowserInstallFailed,
+    install_chromium,
+    looks_like_missing_browser,
+)
 from autofag.config import AppConfig
 from autofag.models import SearchCriteria
 from autofag.studentweb.page import (
@@ -321,6 +326,15 @@ class PlaywrightStudentwebPage:
                 self._playwright.stop()
             self._playwright = None
 
+    def _launch(self, profile_dir: Path) -> None:
+        playwright = sync_playwright().start()
+        self._playwright = playwright
+        self._context = playwright.chromium.launch_persistent_context(
+            user_data_dir=str(profile_dir),
+            headless=self._config.auth.headless,
+            args=["--no-first-run", "--no-default-browser-check"],
+        )
+
     def _ensure_page(self) -> Page:
         if self._page is not None:
             return self._page
@@ -334,18 +348,19 @@ class PlaywrightStudentwebPage:
             raise ProfileInUse(nb.BROWSER_PROFILE_IN_USE.format(pid=holder))
 
         try:
-            playwright = sync_playwright().start()
-            self._playwright = playwright
-            self._context = playwright.chromium.launch_persistent_context(
-                user_data_dir=str(profile_dir),
-                headless=self._config.auth.headless,
-                args=["--no-first-run", "--no-default-browser-check"],
-            )
+            self._launch(profile_dir)
         except PlaywrightError as error:
             self._stop_playwright()
             if _is_profile_in_use(error):
                 raise ProfileInUse(nb.BROWSER_PROFILE_IN_USE_UNKNOWN) from error
-            raise PageUnavailable(nb.BROWSER_FAILED.format(reason=error)) from error
+            if not looks_like_missing_browser(str(error)):
+                raise PageUnavailable(nb.BROWSER_FAILED.format(reason=error)) from error
+            try:
+                install_chromium(self._logger, self._config.auth.login_timeout_seconds)
+                self._launch(profile_dir)
+            except (BrowserInstallFailed, PlaywrightError) as retry_error:
+                self._stop_playwright()
+                raise PageUnavailable(nb.BROWSER_FAILED.format(reason=retry_error)) from retry_error
 
         context = self._context
         if context is None:

@@ -5,12 +5,13 @@ Overvåker emner på UiO Studentweb og melder deg på når en plass blir ledig.
 ## Kom i gang
 
 1. `uv tool install git+https://github.com/vuhnger/autofag`
-2. `uv tool run --from autofag playwright install chromium`
-3. `autofag init`
-4. Logg inn i vinduet som åpnes.
-5. Søk opp emnene du vil ha, og velg dem.
-6. Velg hvordan du vil varsles.
-7. La den stå og gå.
+2. `autofag init`
+3. Logg inn i vinduet som åpnes.
+4. Søk opp emnene du vil ha, og velg dem.
+5. Velg hvordan du vil varsles.
+6. La den stå og gå.
+
+Første gang laster autofag ned nettleseren den bruker, og det tar et par minutter.
 
 autofag ser aldri passordet, fødselsnummeret eller PIN-koden din. Innloggingen skjer i
 browservinduet, og økten ligger i din egen lokale browserprofil. `autofag logout`
