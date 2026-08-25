@@ -43,7 +43,6 @@ class Watcher:
         logger: Logger,
         config: AppConfig,
         run_id: str,
-        term: str = "",
     ) -> None:
         self._session = session
         self._watchlist = watchlist
@@ -54,7 +53,6 @@ class Watcher:
         self._logger = logger
         self._config = config
         self._run_id = run_id
-        self._term = term
         self._scheduled: dict[str, ScheduledCourse] = {}
         self._started_at = clock.now()
         self._stop_requested = False
@@ -164,7 +162,7 @@ class Watcher:
                 self._dispatcher.dispatch(available_notification(row.code.value, row.name))
 
             result = self._enroller.enroll(
-                row, self._term, entry.dialog_choices, on_spot_confirmed=announce_spot
+                row, entry.dialog_choices, on_spot_confirmed=announce_spot
             )
             self._logger.info("enroll %s -> %s (%s)", row.code, result.outcome.value, result.detail)
 

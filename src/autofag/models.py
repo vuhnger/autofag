@@ -47,7 +47,6 @@ class CourseRow:
     status: RowStatus
     status_text: str
     select_button_id: str | None
-    term: str | None = None
 
     @property
     def is_takeable(self) -> bool:

@@ -94,12 +94,11 @@ class EnrollmentLedger:
             )
         return row is not None
 
-    def record_attempt(self, code: CourseCode, term: str, run_id: str) -> int:
+    def record_attempt(self, code: CourseCode, run_id: str) -> int:
         now = self._clock.now()
         with self._session_factory() as session, session.begin():
             row = EnrollmentLedgerRow(
                 course_code=code.value,
-                term=term,
                 state=LEDGER_ATTEMPTED,
                 run_id=run_id,
                 created_at=now,

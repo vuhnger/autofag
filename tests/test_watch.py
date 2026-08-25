@@ -51,7 +51,6 @@ def build_watcher(harness, codes, auto_enroll=True, dry_run=False):
         logger=logger,
         config=harness.config,
         run_id=RUN_ID,
-        term="2026H",
     )
     return watcher, channel, watchlist
 

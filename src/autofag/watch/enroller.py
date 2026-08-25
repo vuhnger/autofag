@@ -55,7 +55,6 @@ class AutoEnroller:
     def enroll(
         self,
         row: CourseRow,
-        term: str,
         choices: dict[str, str] | None = None,
         on_spot_confirmed: Callable[[], None] | None = None,
     ) -> EnrollResult:
@@ -74,7 +73,7 @@ class AutoEnroller:
             if on_spot_confirmed is not None:
                 on_spot_confirmed()
 
-        result = self._attempt_sequence(code, term, choices or {}, announce)
+        result = self._attempt_sequence(code, choices or {}, announce)
         if result.outcome is EnrollOutcome.FULL and not self._spot_announced:
             self._logger.info(
                 "%s så ledig ut, men hadde ingen ledig plass: %s", code, result.detail
@@ -87,18 +86,16 @@ class AutoEnroller:
     def _attempt_sequence(
         self,
         code: CourseCode,
-        term: str,
         choices: dict[str, str],
         announce: Callable[[], None],
     ) -> EnrollResult:
         last = EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_NO_ATTEMPT)
 
         for attempt in range(self._config.max_sequence_attempts):
-            ledger_id = self._ledger.record_attempt(code, term, self._run_id)
+            ledger_id = self._ledger.record_attempt(code, self._run_id)
             try:
                 last = self._session.enroll(
                     code,
-                    term,
                     dry_run=self._dry_run,
                     choices=choices,
                     on_spot_confirmed=announce,

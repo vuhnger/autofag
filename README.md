@@ -4,12 +4,13 @@ Overvåker emner på UiO Studentweb og melder deg på når en plass blir ledig.
 
 ## Kom i gang
 
-1. `uv tool install autofag`
-2. `autofag init`
-3. Logg inn i vinduet som åpnes.
-4. Søk opp emnene du vil ha, og velg dem.
-5. Velg hvordan du vil varsles.
-6. La den stå og gå.
+1. `uv tool install git+https://github.com/vuhnger/autofag`
+2. `uv tool run --from autofag playwright install chromium`
+3. `autofag init`
+4. Logg inn i vinduet som åpnes.
+5. Søk opp emnene du vil ha, og velg dem.
+6. Velg hvordan du vil varsles.
+7. La den stå og gå.
 
 autofag ser aldri passordet, fødselsnummeret eller PIN-koden din. Innloggingen skjer i
 browservinduet, og økten ligger i din egen lokale browserprofil. `autofag logout`
@@ -30,8 +31,9 @@ autofag doctor                sjekk at innlogging, søk og varsling virker
 autofag logout                slett den lokale browserprofilen
 ```
 
-Autofag velger første alternativ i hver nedtrekksliste under påmelding og forteller
-deg hva den valgte. `autofag choose` overstyrer det per emne.
+Autofag velger første ledige alternativ i hver nedtrekksliste under påmelding og
+forteller deg hva den valgte. Er ingen av alternativene ledige, er emnet fullt selv om
+lista sa noe annet, og du får ikke varsel. `autofag choose` overstyrer det per emne.
 
 ## Varsling
 
