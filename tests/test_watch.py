@@ -226,3 +226,28 @@ def test_a_stop_request_interrupts_a_long_sleep(config):
     watcher.run(max_cycles=5)
 
     assert harness.clock.monotonic() - before < 5.0
+
+
+def test_a_course_that_looks_open_but_is_full_never_claims_a_free_spot(config):
+    harness = build_harness(config)
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.full_select = True
+    watcher, channel, _ = build_watcher(harness, ["IN5170"])
+
+    watcher.run(max_cycles=1)
+
+    assert channel.sent == []
+    assert harness.page.enrolled == []
+
+
+def test_a_real_free_spot_is_still_announced_and_taken(config):
+    harness = build_harness(config)
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = ("Parti 1",)
+    watcher, channel, _ = build_watcher(harness, ["IN5170"])
+
+    watcher.run(max_cycles=1)
+
+    kinds = [n.kind for n in channel.sent]
+    assert kinds[0] is NotificationKind.AVAILABLE
+    assert harness.page.enrolled == ["IN5170"]

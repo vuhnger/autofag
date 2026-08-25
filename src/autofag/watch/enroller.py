@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from logging import Logger
 
 from autofag import strings_nb as nb
@@ -49,11 +50,17 @@ class AutoEnroller:
         self._config = config
         self._run_id = run_id
         self._dry_run = dry_run
+        self._spot_announced = False
 
     def enroll(
-        self, row: CourseRow, term: str, choices: dict[str, str] | None = None
+        self,
+        row: CourseRow,
+        term: str,
+        choices: dict[str, str] | None = None,
+        on_spot_confirmed: Callable[[], None] | None = None,
     ) -> EnrollResult:
         code = row.code
+        self._spot_announced = False
 
         if not self._config.enabled:
             return EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_DISABLED)
@@ -62,19 +69,40 @@ class AutoEnroller:
         if self._unverified_limit_reached(code):
             return EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_TOO_MANY_UNVERIFIED)
 
-        result = self._attempt_sequence(code, term, choices or {})
+        def announce() -> None:
+            self._spot_announced = True
+            if on_spot_confirmed is not None:
+                on_spot_confirmed()
+
+        result = self._attempt_sequence(code, term, choices or {}, announce)
+        if result.outcome is EnrollOutcome.FULL and not self._spot_announced:
+            self._logger.info(
+                "%s så ledig ut, men hadde ingen ledig plass: %s", code, result.detail
+            )
+            return result
+
         self._dispatcher.dispatch(self._outcome_notification(row, result))
         return result
 
     def _attempt_sequence(
-        self, code: CourseCode, term: str, choices: dict[str, str]
+        self,
+        code: CourseCode,
+        term: str,
+        choices: dict[str, str],
+        announce: Callable[[], None],
     ) -> EnrollResult:
         last = EnrollResult(code, EnrollOutcome.ABORTED, nb.ENROLL_NO_ATTEMPT)
 
         for attempt in range(self._config.max_sequence_attempts):
             ledger_id = self._ledger.record_attempt(code, term, self._run_id)
             try:
-                last = self._session.enroll(code, term, dry_run=self._dry_run, choices=choices)
+                last = self._session.enroll(
+                    code,
+                    term,
+                    dry_run=self._dry_run,
+                    choices=choices,
+                    on_spot_confirmed=announce,
+                )
             except TransportError as error:
                 self._ledger.settle(ledger_id, LEDGER_UNVERIFIED, str(error))
                 self._logger.warning(

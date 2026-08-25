@@ -202,3 +202,26 @@ def test_a_step_with_only_back_and_decline_has_no_way_forward(config):
 
     assert harness.session._pick(state, config.selectors.confirm_forward_labels) is None
     assert harness.session._pick(state, config.selectors.confirm_final_labels) is None
+
+
+def test_a_full_dropdown_is_reported_as_full_not_as_a_free_spot(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.full_select = True
+
+    result = harness.session.enroll(CourseCode("IN5170"), term="2026H")
+
+    assert result.outcome is EnrollOutcome.FULL
+    assert "Ingen ledig plass" in result.detail
+    assert harness.page.enrolled == []
+
+
+def test_the_spot_callback_fires_only_when_a_place_really_exists(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.full_select = True
+    fired = []
+
+    harness.session.enroll(
+        CourseCode("IN5170"), term="2026H", on_spot_confirmed=lambda: fired.append(1)
+    )
+
+    assert fired == []

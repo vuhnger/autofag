@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import replace
 from logging import Logger
 
@@ -75,12 +76,18 @@ class StudentwebSession:
         term: str,
         dry_run: bool = False,
         choices: dict[str, str] | None = None,
+        on_spot_confirmed: Callable[[], None] | None = None,
     ) -> EnrollResult:
         with self._lock:
-            return self._enroll_locked(code, term, dry_run, choices or {})
+            return self._enroll_locked(code, term, dry_run, choices or {}, on_spot_confirmed)
 
     def _enroll_locked(
-        self, code: CourseCode, term: str, dry_run: bool, choices: dict[str, str]
+        self,
+        code: CourseCode,
+        term: str,
+        dry_run: bool,
+        choices: dict[str, str],
+        on_spot_confirmed: Callable[[], None] | None,
     ) -> EnrollResult:
         result, parsed_rows = self._parse(self._page.search(SearchCriteria(course_code=code.value)))
 
@@ -108,7 +115,7 @@ class StudentwebSession:
         except ConfirmDialogUnrecognised as error:
             return EnrollResult(code, EnrollOutcome.ABORTED, str(error))
 
-        return self._walk_dialog(code, state, dry_run, choices)
+        return self._walk_dialog(code, state, dry_run, choices, on_spot_confirmed)
 
     def preview_enrollment(self, code: CourseCode) -> list[DialogState]:
         with self._lock:
@@ -135,10 +142,16 @@ class StudentwebSession:
             return steps
 
     def _walk_dialog(
-        self, code: CourseCode, state: DialogState, dry_run: bool, choices: dict[str, str]
+        self,
+        code: CourseCode,
+        state: DialogState,
+        dry_run: bool,
+        choices: dict[str, str],
+        on_spot_confirmed: Callable[[], None] | None = None,
     ) -> EnrollResult:
         selectors = self._config.selectors
         made: list[str] = []
+        announced = False
 
         for _ in range(selectors.max_dialog_steps):
             if code.value.casefold() not in state.html.casefold():
@@ -152,6 +165,11 @@ class StudentwebSession:
             if isinstance(resolved, EnrollResult):
                 return resolved
             state = resolved
+
+            if not announced:
+                announced = True
+                if on_spot_confirmed is not None:
+                    on_spot_confirmed()
 
             final = self._pick(state, selectors.confirm_final_labels)
             if final is not None:
@@ -204,8 +222,11 @@ class StudentwebSession:
             if option is None:
                 return EnrollResult(
                     code,
-                    EnrollOutcome.ABORTED,
-                    nb.ENROLL_NO_OPTIONS.format(field=field),
+                    EnrollOutcome.FULL,
+                    nb.ENROLL_NO_FREE_PLACE.format(
+                        field=field,
+                        options=", ".join(item.label for item in select.options) or "ingen",
+                    ),
                 )
             try:
                 state = self._page.choose(select.id, option.value)
@@ -215,12 +236,16 @@ class StudentwebSession:
         return state
 
     def _option_for(self, select: DialogSelect, choices: dict[str, str]):
+        available = select.available_options(self._config.selectors.unavailable_option_labels)
+        if not available:
+            return None
+
         wanted = choices.get(select.label) or choices.get(select.id)
         if wanted:
             preferred = select.option_matching(wanted)
-            if preferred is not None:
+            if preferred in available:
                 return preferred
-        return select.options[0] if select.options else None
+        return available[0]
 
     def _with_choices(self, result: EnrollResult, made: list[str]) -> EnrollResult:
         if not made:
