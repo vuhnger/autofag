@@ -53,7 +53,7 @@ def start_detached(arguments: list[str], data_dir: Path) -> StartedWatch:
     return StartedWatch(pid=process.pid, log_path=log_path)
 
 
-def stop_process(pid: int, clock: Clock, timeout_seconds: float = 30.0) -> bool:
+def stop_process(pid: int, clock: Clock, timeout_seconds: float = 15.0) -> bool:
     try:
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
