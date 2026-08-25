@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/vuhnger/autofag/compare/v1.2.0...v1.3.0) (2026-08-25)
+
+
+### Features
+
+* last ned nettleseren automatisk første gang ([#21](https://github.com/vuhnger/autofag/issues/21)) ([b6e4d11](https://github.com/vuhnger/autofag/commit/b6e4d113b62523bb6de79c88c62999c4bdef0387))
+
+
+### Bug Fixes
+
+* fjern terminen som aldri ble verifisert ([#20](https://github.com/vuhnger/autofag/issues/20)) ([ab7b19e](https://github.com/vuhnger/autofag/commit/ab7b19ef8b87f5ada266641a89f5313bb2f2a5f7))
+* la preview bruke samme kapasitetssjekk som påmeldingen ([#16](https://github.com/vuhnger/autofag/issues/16)) ([86b56a4](https://github.com/vuhnger/autofag/commit/86b56a41b9348ed3b165ce34777b210af0280654))
+
 ## [1.2.0](https://github.com/vuhnger/autofag/compare/v1.1.0...v1.2.0) (2026-08-25)
 
 
