@@ -26,6 +26,14 @@ Oppdater med `uv tool install --force git+https://github.com/vuhnger/autofag`.
 autofag ser aldri passordet, fødselsnummeret eller PIN-koden din. Innloggingen skjer i
 browservinduet, og økten ligger i din egen lokale browserprofil.
 
+## Fra en kloning
+
+```
+git clone https://github.com/vuhnger/autofag
+cd autofag
+uv run autofag init
+```
+
 ## Nyttige kommandoer
 
 ```
