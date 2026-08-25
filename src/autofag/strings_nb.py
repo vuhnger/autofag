@@ -175,3 +175,5 @@ STOP_STILL_RUNNING = "Pid {pid} svarte ikke innen {seconds} sekunder. Stopp den 
 INIT_EXISTING_WATCHLIST = "Du overvåker allerede: {codes}"
 INIT_KEEP_EXISTING = "Vil du beholde dem?"
 INIT_REMOVED_EXISTING = "Fjernet: {codes}"
+
+ENROLL_NO_FREE_PLACE = "ingen ledig plass i {field}. Studentweb tilbød: {options}"

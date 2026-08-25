@@ -75,6 +75,14 @@ class SelectorConfig(BaseModel):
         "trekk",
     )
     max_dialog_steps: int = 6
+    unavailable_option_labels: tuple[str, ...] = (
+        "ingen ledig plass",
+        "ingen ledige plasser",
+        "ingen ledig plass igjen",
+        "fullt",
+        "no places available",
+        "no available places",
+    )
     idle_dialog_markers: tuple[str, ...] = (
         "du blir logget ut",
         "du blir logga ut",

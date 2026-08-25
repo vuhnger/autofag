@@ -58,9 +58,12 @@ class DialogSelect:
     def needs_a_choice(self) -> bool:
         return not self.selected
 
-    @property
-    def only_option(self) -> DialogOption | None:
-        return self.options[0] if len(self.options) == 1 else None
+    def available_options(self, unavailable_labels: tuple[str, ...]) -> tuple[DialogOption, ...]:
+        return tuple(
+            option
+            for option in self.options
+            if not any(word in option.label.casefold() for word in unavailable_labels)
+        )
 
     def option_matching(self, wanted: str) -> DialogOption | None:
         needle = wanted.casefold()

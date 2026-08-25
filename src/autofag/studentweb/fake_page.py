@@ -53,6 +53,7 @@ class FakeStudentwebPage:
     fail_next_count: int = 0
     dialog_steps: int = 2
     select_options: tuple[str, ...] = ()
+    full_select: bool = False
     drop_next_confirm: bool = False
     lose_race_on_confirm: bool = False
     offer_forward: bool = True
@@ -164,7 +165,17 @@ class FakeStudentwebPage:
             controls.append(DialogControl(id=FORWARD_BUTTON_ID, label="neste"))
 
         selects: tuple[DialogSelect, ...] = ()
-        if not is_last and self.select_options:
+        if not is_last and self.full_select:
+            select_id = f"leggTilEmneForm:parti{self._step}"
+            selects = (
+                DialogSelect(
+                    id=select_id,
+                    label="undervisningsparti",
+                    options=(DialogOption(value="none", label="Ingen ledig plass"),),
+                    selected=self._chosen.get(select_id, ""),
+                ),
+            )
+        elif not is_last and self.select_options:
             select_id = f"leggTilEmneForm:parti{self._step}"
             selects = (
                 DialogSelect(
