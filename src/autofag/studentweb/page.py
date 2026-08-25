@@ -27,15 +27,7 @@ class NoFreePlace(PageUnavailable):
 
 
 @dataclass(frozen=True, slots=True)
-class SelectOption:
-    value: str
-    label: str
-
-
-@dataclass(frozen=True, slots=True)
 class SearchFilters:
-    subjects: tuple[SelectOption, ...] = ()
-    faculties: tuple[SelectOption, ...] = ()
     release: str = "unknown"
 
 

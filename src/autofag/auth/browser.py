@@ -23,7 +23,6 @@ from autofag.studentweb.page import (
     ProfileInUse,
     RawSearchResult,
     SearchFilters,
-    SelectOption,
 )
 
 FIND_SEARCH_BUTTON = """
@@ -35,13 +34,6 @@ FIND_SEARCH_BUTTON = """
 }
 """
 
-READ_OPTIONS = """
-(suffix) => {
-  const select = [...document.querySelectorAll('select')].find(s => s.id.endsWith(suffix));
-  if (!select) return [];
-  return [...select.options].filter(o => o.value).map(o => ({value: o.value, label: o.text}));
-}
-"""
 
 READ_RELEASE = """
 (pattern) => {
@@ -72,15 +64,6 @@ DIALOG_IS_READY = """
 }
 """
 
-UNUSED_READ_VISIBLE_DIALOG = """
-(marker) => {
-  const node = [...document.querySelectorAll('[id]')]
-    .filter(el => el.id.includes(marker))
-    .find(el => el.offsetParent !== null && (el.innerText || '').trim().length > 0);
-  if (!node) return '';
-  return (node.closest('.ui-dialog') || node).outerHTML;
-}
-"""
 
 DESCRIBE_DIALOG_CANDIDATES = """
 (marker) => {
@@ -121,12 +104,6 @@ IS_SIGNED_IN = """
 (selector) => !!document.querySelector(selector)
 """
 
-LOOKS_LIKE_LOGIN = """
-(markers) => {
-  const html = document.documentElement.innerHTML;
-  return markers.some(marker => html.includes(marker));
-}
-"""
 
 CLICK_BY_ID = """
 (id) => {
@@ -236,11 +213,8 @@ class PlaywrightStudentwebPage:
         if not self._is_signed_in(page):
             raise NotAuthenticated("Studentweb sendte oss til innloggingssiden")
 
-        selectors = self._config.selectors
         return SearchFilters(
-            subjects=self._options(page, selectors.subject_select_suffix),
-            faculties=self._options(page, selectors.faculty_select_suffix),
-            release=page.evaluate(READ_RELEASE, selectors.release_pattern),
+            release=page.evaluate(READ_RELEASE, self._config.selectors.release_pattern)
         )
 
     def search(self, criteria: SearchCriteria) -> RawSearchResult:
@@ -444,10 +418,6 @@ class PlaywrightStudentwebPage:
             }""",
             {"suffix": suffix, "value": value},
         )
-
-    def _options(self, page: Page, suffix: str) -> tuple[SelectOption, ...]:
-        raw = page.evaluate(READ_OPTIONS, suffix)
-        return tuple(SelectOption(value=item["value"], label=item["label"]) for item in raw)
 
     def _read_result(self, page: Page, page_index: int) -> RawSearchResult:
         selectors = self._config.selectors

@@ -15,9 +15,6 @@ class RetryPolicy:
     def max_attempts(self) -> int:
         return self._config.max_attempts
 
-    def is_retryable_status(self, status_code: int) -> bool:
-        return status_code in self._config.retry_on_status
-
     def backoff_delays(self) -> Iterator[float]:
         delay = self._config.initial_backoff_seconds
         for _ in range(max(0, self._config.max_attempts - 1)):

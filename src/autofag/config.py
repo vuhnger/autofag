@@ -26,10 +26,6 @@ class StudentwebConfig(BaseModel):
     base_url: str = "https://studentweb.uio.no/studentweb/"
     courses_path: str = "aktiveemner.jsf"
     transport: Literal["browser", "fake"] = "browser"
-    fixtures_dir: Path | None = None
-    request_timeout_seconds: float = 20.0
-    connect_timeout_seconds: float = 10.0
-    user_agent: str = "autofag (+https://github.com/vuhnger/autofag)"
 
     @field_validator("base_url")
     @classmethod
@@ -97,8 +93,6 @@ class SelectorConfig(BaseModel):
     paginator_next_class: str = "ui-paginator-next"
     view_state_marker: str = "javax.faces.ViewState"
     release_pattern: str = r"Studentweb\s+([0-9]+-[0-9.]+(?:\s+[0-9:]+)?)"
-    login_markers: tuple[str, ...] = ("login.jsf", "velgInstitusjon.jsf")
-    view_expired_markers: tuple[str, ...] = ("ViewExpiredException", "viewExpired")
 
 
 class StatusVocabularyConfig(BaseModel):
@@ -148,7 +142,6 @@ class BudgetConfig(BaseModel):
     requests_per_hour: int = 500
     min_seconds_between_requests: float = 1.0
     jitter_fraction: float = 0.2
-    max_concurrent_requests: int = 1
 
 
 class RetryConfig(BaseModel):
@@ -156,12 +149,9 @@ class RetryConfig(BaseModel):
     initial_backoff_seconds: float = 2.0
     backoff_multiplier: float = 3.0
     max_backoff_seconds: float = 120.0
-    retry_on_status: tuple[int, ...] = (429, 500, 502, 503, 504)
 
 
 class SessionConfig(BaseModel):
-    reanchor_after_postbacks: int = 200
-    reanchor_after_minutes: int = 60
     keepalive_after_idle_minutes: int = 10
     reprobe_minutes: int = 5
     max_reprobe_attempts: int = 24

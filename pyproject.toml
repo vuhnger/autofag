@@ -38,6 +38,7 @@ dev = [
   "ruff>=0.5.0",
   "ty>=0.0.1a1",
   "types-PyYAML>=6.0.12",
+  "vulture>=2.14",
 ]
 
 [project.urls]
@@ -79,3 +80,10 @@ warn_redundant_casts = true
 
 [tool.ty.src]
 include = ["src/autofag"]
+
+[tool.vulture]
+paths = ["src", "tests"]
+min_confidence = 60
+sort_by_size = true
+ignore_decorators = ["@app.command", "@field_validator"]
+ignore_names = ["cls", "signal_number", "frame", "observed_at", "updated_at"]

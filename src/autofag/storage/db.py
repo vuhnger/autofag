@@ -6,7 +6,6 @@ from pathlib import Path
 from sqlalchemy import (
     DateTime,
     Engine,
-    Float,
     Integer,
     String,
     Text,
@@ -73,7 +72,6 @@ class RequestBudgetRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     hour_bucket: Mapped[str] = mapped_column(String(20), index=True)
     request_count: Mapped[int] = mapped_column(Integer, default=0)
-    last_request_monotonic: Mapped[float] = mapped_column(Float, default=0.0)
 
 
 class NotificationDeliveryRow(Base):

@@ -10,7 +10,6 @@ from autofag.clock import Clock
 from autofag.config import AppConfig, save_config
 from autofag.models import (
     CourseRow,
-    InvalidCourseCode,
     Notification,
     NotificationKind,
     SearchCriteria,
@@ -307,12 +306,3 @@ def _parse_timestamp(value: str) -> datetime | None:
             continue
         return naive.astimezone()
     return None
-
-
-def course_code_or_none(value: str):
-    from autofag.models import CourseCode
-
-    try:
-        return CourseCode(value)
-    except InvalidCourseCode:
-        return None
