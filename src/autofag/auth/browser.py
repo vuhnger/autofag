@@ -94,6 +94,29 @@ DESCRIBE_DIALOG_CANDIDATES = """
 }
 """
 
+DISMISS_IDLE_DIALOG = """
+(args) => {
+  const owner = [...document.querySelectorAll('div, section, form')]
+    .filter(node => node.offsetParent !== null)
+    .find(node => {
+      const text = (node.innerText || '').toLowerCase();
+      return args.markers.some(marker => text.includes(marker));
+    });
+  if (!owner) return null;
+
+  const control = [...owner.querySelectorAll('button, input[type=submit], a[id]')]
+    .filter(el => el.offsetParent !== null)
+    .find(el => {
+      const label = (el.innerText || el.value || '').trim().toLowerCase();
+      return args.labels.some(word => label.includes(word));
+    });
+  if (!control) return 'seen';
+
+  control.click();
+  return control.id || 'clicked';
+}
+"""
+
 IS_SIGNED_IN = """
 (selector) => !!document.querySelector(selector)
 """
@@ -203,6 +226,7 @@ class PlaywrightStudentwebPage:
 
     def open(self) -> SearchFilters:
         page = self._ensure_page()
+        self._dismiss_idle_dialog(page)
         if not self._is_on_courses_page(page):
             page.goto(self._config.studentweb.courses_url, wait_until="domcontentloaded")
         if not self._is_signed_in(page):
@@ -346,6 +370,27 @@ class PlaywrightStudentwebPage:
             raise PageUnavailable("nettleseren har ingen aktiv kontekst")
         self._page = context.pages[0] if context.pages else context.new_page()
         return self._page
+
+    def _dismiss_idle_dialog(self, page: Page) -> None:
+        selectors = self._config.selectors
+        try:
+            outcome = page.evaluate(
+                DISMISS_IDLE_DIALOG,
+                {
+                    "markers": list(selectors.idle_dialog_markers),
+                    "labels": list(selectors.idle_dismiss_labels),
+                },
+            )
+        except PlaywrightError:
+            return
+
+        if outcome is None:
+            return
+        if outcome == "seen":
+            self._logger.warning("fant en utloggingsvarsel-dialog uten knapp å trykke på")
+            return
+        self._logger.info("lukket utloggingsvarselet via %s", outcome)
+        page.wait_for_timeout(300)
 
     def _is_signed_in(self, page: Page) -> bool:
         try:
