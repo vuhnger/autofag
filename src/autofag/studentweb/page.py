@@ -22,6 +22,10 @@ class ProfileInUse(PageUnavailable):
     pass
 
 
+class NoFreePlace(PageUnavailable):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class SelectOption:
     value: str

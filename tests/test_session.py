@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from autofag.models import CourseCode, EnrollOutcome, RowStatus, SearchCriteria
-from autofag.studentweb.page import NotAuthenticated
+from autofag.studentweb.page import NoFreePlace, NotAuthenticated
 from autofag.transport.errors import BudgetExhausted, RequestFailed
 from tests.conftest import build_harness
 
@@ -225,3 +225,23 @@ def test_the_spot_callback_fires_only_when_a_place_really_exists(harness):
     )
 
     assert fired == []
+
+
+def test_preview_reports_a_full_dropdown_instead_of_choosing_it(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.full_select = True
+
+    with pytest.raises(NoFreePlace) as error:
+        harness.session.preview_enrollment(CourseCode("IN5170"))
+
+    assert "Ingen ledig plass" in str(error.value)
+    assert harness.page.enrolled == []
+
+
+def test_preview_uses_the_saved_choice_for_the_course(harness):
+    harness.page.advance_to_takeable("IN5170")
+    harness.page.select_options = ("Parti 1", "Parti 2")
+
+    harness.session.preview_enrollment(CourseCode("IN5170"), {"undervisningsparti": "Parti 2"})
+
+    assert "Parti 2" in harness.page.chosen_values()

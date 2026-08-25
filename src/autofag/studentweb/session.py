@@ -22,6 +22,7 @@ from autofag.studentweb.page import (
     ConfirmDialogUnrecognised,
     DialogSelect,
     DialogState,
+    NoFreePlace,
     RawSearchResult,
     SearchFilters,
     StudentwebPage,
@@ -117,7 +118,9 @@ class StudentwebSession:
 
         return self._walk_dialog(code, state, dry_run, choices, on_spot_confirmed)
 
-    def preview_enrollment(self, code: CourseCode) -> list[DialogState]:
+    def preview_enrollment(
+        self, code: CourseCode, choices: dict[str, str] | None = None
+    ) -> list[DialogState]:
         with self._lock:
             row = self.search_exact(code)
             if row is None or not row.is_takeable:
@@ -129,10 +132,7 @@ class StudentwebSession:
             for _ in range(self._config.selectors.max_dialog_steps):
                 if self._pick(state, self._config.selectors.confirm_final_labels) is not None:
                     return steps
-                for select in state.unresolved_selects:
-                    if not select.options:
-                        return steps
-                    state = self._page.choose(select.id, select.options[0].value)
+                state = self._preview_selects(code, state, choices or {})
                 forward = self._pick(state, self._config.selectors.confirm_forward_labels)
                 if forward is None:
                     return steps
@@ -140,6 +140,22 @@ class StudentwebSession:
                 steps.append(state)
 
             return steps
+
+    def _preview_selects(
+        self, code: CourseCode, state: DialogState, choices: dict[str, str]
+    ) -> DialogState:
+        for select in state.unresolved_selects:
+            option = self._option_for(select, choices)
+            if option is None:
+                raise NoFreePlace(
+                    nb.PREVIEW_NO_FREE_PLACE.format(
+                        code=code,
+                        field=select.label or select.id,
+                        options=", ".join(item.label for item in select.options) or "ingen",
+                    )
+                )
+            state = self._page.choose(select.id, option.value)
+        return state
 
     def _walk_dialog(
         self,

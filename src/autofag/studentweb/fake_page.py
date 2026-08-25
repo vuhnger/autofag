@@ -119,6 +119,9 @@ class FakeStudentwebPage:
         self._chosen[select_id] = value
         return self._dialog_state()
 
+    def chosen_values(self) -> tuple[str, ...]:
+        return tuple(self._chosen.values())
+
     def advance_dialog(self, control_id: str) -> DialogState:
         self._act("advance_dialog")
         if control_id == DECLINE_BUTTON_ID:

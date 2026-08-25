@@ -149,6 +149,9 @@ ENROLL_STILL_UNVERIFIED = "{detail}; emnet står som {status}, så plassen er ik
 
 
 PREVIEW_NOT_TAKEABLE = "{code} har ingen ledig plass akkurat nå, så dialogen kan ikke åpnes."
+PREVIEW_NO_FREE_PLACE = (
+    "{code} ser ledig ut i lista, men {field} har ingen plass å velge. Studentweb tilbød: {options}"
+)
 PREVIEW_HEADER = "Påmeldingsdialogen for {code}"
 PREVIEW_STEP = "Steg {step}"
 PREVIEW_CONTROLS = "Knapper"
