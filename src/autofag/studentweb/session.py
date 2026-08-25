@@ -74,7 +74,6 @@ class StudentwebSession:
     def enroll(
         self,
         code: CourseCode,
-        term: str,
         dry_run: bool = False,
         choices: dict[str, str] | None = None,
         on_spot_confirmed: Callable[[], None] | None = None,

@@ -14,6 +14,8 @@ from sqlalchemy import (
     inspect,
     text,
 )
+from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from autofag.config import StorageConfig
@@ -57,7 +59,6 @@ class EnrollmentLedgerRow(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     course_code: Mapped[str] = mapped_column(String(32), index=True)
-    term: Mapped[str] = mapped_column(String(32), default="")
     state: Mapped[str] = mapped_column(String(32))
     detail: Mapped[str] = mapped_column(Text, default="")
     run_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -107,6 +108,7 @@ def create_database(config: StorageConfig) -> tuple[Engine, sessionmaker]:
     engine = create_engine(config.database_url(), future=True)
     Base.metadata.create_all(engine)
     add_missing_columns(engine)
+    drop_removed_columns(engine)
     return engine, sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
 
@@ -145,6 +147,38 @@ def add_missing_columns(engine: Engine) -> list[str]:
                 added.append(f"{table.name}.{column.name}")
 
     return added
+
+
+def drop_removed_columns(engine: Engine) -> list[str]:
+    inspector = inspect(engine)
+    dropped: list[str] = []
+
+    with engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            known = {column.name for column in table.columns}
+            for column in inspector.get_columns(table.name):
+                if column["name"] in known:
+                    continue
+                try:
+                    connection.execute(
+                        text(f"ALTER TABLE {table.name} DROP COLUMN {column['name']}")
+                    )
+                except OperationalError as error:
+                    if _blocks_inserts(column):
+                        raise SchemaTooOld(
+                            f"{table.name}.{column['name']} er ikke i bruk lenger, "
+                            f"men kan ikke fjernes: {error}"
+                        ) from error
+                    continue
+                dropped.append(f"{table.name}.{column['name']}")
+
+    return dropped
+
+
+def _blocks_inserts(column: ReflectedColumn) -> bool:
+    return not column.get("nullable", True) and column.get("default") is None
 
 
 def _scalar_default(column) -> object | None:
