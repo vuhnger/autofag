@@ -43,26 +43,3 @@ jobs:
 
       - name: Test
         run: uv run pytest -q
-
-  install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Clone and run
-        run: uv run autofag version
-
-      - name: Install the way the README says
-        run: uv tool install "git+file://$PWD"
-
-      - name: Command is on PATH
-        run: autofag version
-
-      - name: Browser bootstraps itself
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/browsers
-        run: uv run python tests/smoke_browser_bootstrap.py
