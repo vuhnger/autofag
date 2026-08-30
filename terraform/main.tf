@@ -3,7 +3,7 @@ provider "github" {
 }
 
 module "autofag" {
-  source = "git::https://github.com/vuhnger/terraform-github-repo.git?ref=v1.0.0"
+  source = "git::https://github.com/vuhnger/terraform-github-repo.git?ref=v1.0.1"
 
   name        = "autofag"
   description = "Overvåker emner på UiO Studentweb og melder deg på når en plass blir ledig"
