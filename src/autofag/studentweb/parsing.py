@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from bs4 import BeautifulSoup, Tag
-from lxml import etree  # ty: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[import-not-found]
 
 from autofag.config import SelectorConfig
 from autofag.models import CourseCode, CourseRow, InvalidCourseCode, SearchResult
