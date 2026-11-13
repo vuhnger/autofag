@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/vuhnger/autofag/compare/v1.3.0...v1.3.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* upgrade soupsieve and certifi, follow ty rule rename ([#32](https://github.com/vuhnger/autofag/issues/32)) ([0a86693](https://github.com/vuhnger/autofag/commit/0a86693710f7374c25bdec38c1f387bdffbf048b))
+
 ## [1.3.0](https://github.com/vuhnger/autofag/compare/v1.2.0...v1.3.0) (2026-08-25)
 
 
